@@ -1,18 +1,18 @@
 {
   "canisters": {
-    "lumora_backend": {
-      "main": "src/lumora_backend/main.mo",
+    "backend": {
+      "main": "src/backend/main.mo",
       "type": "motoko"
     },
-    "lumora_frontend": {
+    "frontend": {
       "dependencies": [
-        "lumora_backend"
+        "backend"
       ],
       "source": [
-        "src/lumora_frontend/dist"
+        "src/frontend/dist"
       ],
       "type": "assets",
-      "workspace": "lumora_frontend"
+      "workspace": "frontend"
     }
   },
   "defaults": {
