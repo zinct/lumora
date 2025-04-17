@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "lumora_backend": {
+      "main": "src/lumora_backend/main.mo",
+      "type": "motoko"
+    },
+    "lumora_frontend": {
+      "dependencies": [
+        "lumora_backend"
+      ],
+      "source": [
+        "src/lumora_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "lumora_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
