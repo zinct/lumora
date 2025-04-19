@@ -5,14 +5,15 @@
       "type": "motoko"
     },
     "frontend": {
-      "dependencies": [
-        "backend"
-      ],
-      "source": [
-        "src/frontend/dist"
-      ],
+      "dependencies": ["backend"],
+      "source": ["src/frontend/dist"],
       "type": "assets",
       "workspace": "frontend"
+    },
+    "icrc1_ledger": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/ic/releases/download/ledger-suite-icrc-2025-04-14/ledger.did",
+      "wasm": "https://github.com/dfinity/ic/releases/download/ledger-suite-icrc-2025-04-14/ic-icrc1-ledger.wasm.gz"
     }
   },
   "defaults": {

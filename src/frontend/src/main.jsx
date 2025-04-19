@@ -1,14 +1,16 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
 import "./core/style/global.css";
 
-import { BrowserRouter } from "react-router";
+import { BrowserRouter, Outlet, Route, Routes, useNavigate } from "react-router";
+import HomePage from "./pages/home-page.jsx";
 
 createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <StrictMode>
-      <App />
-    </StrictMode>
-  </BrowserRouter>
+  <StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route index element={<HomePage />} />
+      </Routes>
+    </BrowserRouter>
+  </StrictMode>
 );
