@@ -1,24 +1,12 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef } from "react";
 import { Button } from "@/core/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
-import { ArrowRight, Leaf, Globe, Users, Trophy, Zap, ChevronDown } from "lucide-react";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
-import { useAuth } from "../contexts/auth-context";
-import { useCanister } from "@connect2ic/react";
-import { Principal } from "@dfinity/principal";
-
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useNavigate } from "react-router";
 export default function HomePage() {
-  const { isAuthenticated, principal } = useAuth();
-  const [lumora] = useCanister("lumora");
-  const [balance, setBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-
   // Refs for scroll animations
   const heroRef = useRef(null);
-  const aboutRef = useRef(null);
-  const howItWorksRef = useRef(null);
-  const nftRef = useRef(null);
-  const joinRef = useRef(null);
+  const navigate = useNavigate();
 
   // Scroll animations
   const { scrollYProgress } = useScroll({
@@ -74,8 +62,8 @@ export default function HomePage() {
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.8 }} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button className="bg-beige-200 hover:bg-beige-300 text-beige-950 px-8 py-6 rounded-xl text-lg font-medium">
-              Join Ecosystem <ArrowRight className="ml-2 h-5 w-5" />
+            <Button onClick={() => navigate("/event")} className="bg-beige-200 hover:bg-beige-300 text-beige-950 px-8 py-6 rounded-xl text-lg font-medium">
+              Contribute <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button variant="outline" className="border-beige-200 text-beige-200 hover:bg-beige-200/10 px-8 py-6 rounded-xl text-lg font-medium">
               Learn More
@@ -111,7 +99,9 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
               Decentralized <span className="text-beige-200">Eco-Rewards</span> Platform
             </h2>
-            <p className="text-beige-100 text-lg">Lumora is a revolutionary platform that connects real-world environmental actions with digital rewards. Our community-driven ecosystem incentivizes sustainable behaviors through transparent, blockchain-verified achievements.</p>
+            <p className="text-beige-100 text-lg">
+              Lumora is a revolutionary platform that connects real-world environmental actions with digital rewards. Our community-driven ecosystem incentivizes sustainable behaviors through transparent, blockchain-verified achievements.
+            </p>
           </div>
         </div>
       </section>
