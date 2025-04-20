@@ -1,21 +1,19 @@
-import React from "react";
-import "@/core/style/global.css";
+import "@/app/globals.css";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 
+const inter = Inter({ subsets: ["latin"] });
+
 export const metadata = {
-  title: "Lumora - Decentralized Eco-Rewards Platform",
-  description: "Earn rewards for real-world eco-friendly actions through our decentralized, community-driven platform built on the Internet Computer Protocol.",
+  title: "OpenSea Clone - NFT Marketplace",
+  description: "Discover, collect, and sell extraordinary NFTs on the world's first and largest NFT marketplace",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <head>
-        <title>{metadata.title}</title>
-        <meta name="description" content={metadata.description} />
-      </head>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+      <body className={inter.className}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           {children}
         </ThemeProvider>
       </body>

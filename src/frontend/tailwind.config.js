@@ -1,7 +1,7 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+const config = {
   darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: ["./pages/**/*.{js,jsx}", "./components/**/*.{js,jsx}", "./app/**/*.{js,jsx}", "./src/**/*.{js,jsx}", "*.{js,jsx,mdx}", "*.{js,ts,jsx,tsx,mdx}"],
+  prefix: "",
   theme: {
     container: {
       center: true,
@@ -18,8 +18,8 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#eceae3",
-          foreground: "#2c2b27",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -45,19 +45,6 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        beige: {
-          50: "#faf9f7",
-          100: "#f5f3ef",
-          200: "#eceae3",
-          300: "#e0ddd3",
-          400: "#d3cfc1",
-          500: "#c5c0ae",
-          600: "#b7b19c",
-          700: "#a9a28a",
-          800: "#9b9378",
-          900: "#8d8566",
-          950: "#2c2b27",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -82,3 +69,5 @@ module.exports = {
   },
   plugins: [require("tailwindcss-animate")],
 };
+
+export default config;
