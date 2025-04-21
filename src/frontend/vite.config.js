@@ -37,7 +37,7 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src", import.meta.url)),
       },
       {
-        find: "@/components",
+        find: "@/core/components",
         replacement: fileURLToPath(new URL("./src/core/components", import.meta.url)),
       },
     ],

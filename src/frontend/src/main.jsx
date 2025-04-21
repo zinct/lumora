@@ -4,12 +4,27 @@ import "./core/style/global.css";
 
 import { BrowserRouter, Route, Routes } from "react-router";
 import HomePage from "./pages/home-page.jsx";
+import HomeLayout from "@/core/components/layouts/home-layout.jsx";
+import ProjectListPage from "./pages/project/project-list-page.jsx";
+import ResourcePage from "./pages/resource-page.jsx";
+import NFTsPage from "./pages/nft/nft-list-page";
+import ProjectDetailPage from "./pages/project/project-detail-page";
+import CommunityDashboardPage from "./pages/community-page";
+import BalancePage from "./pages/balance-page";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route index element={<HomePage />} />
+        <Route path="/" element={<HomeLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="/projects" element={<ProjectListPage />} />
+          <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/resources" element={<ResourcePage />} />
+          <Route path="/nfts" element={<NFTsPage />} />
+          <Route path="/community" element={<CommunityDashboardPage />} />
+          <Route path="/balance" element={<BalancePage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   </StrictMode>
