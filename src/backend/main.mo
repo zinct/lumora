@@ -77,23 +77,25 @@ actor Lumora {
 
     public type Result<T, E> = { #Ok : T; #Err : E };
 
-    // Event Types
-    public type EventId = Nat32;
-    public type Event = { 
-        id: EventId; 
+    // Project Types
+    public type ProjectId = Nat32;
+    public type Project = { 
+        id: ProjectId; 
         title: Text; 
         description: Text;
+        category: Text;
         createdAt: Time.Time; 
         expiredAt: Time.Time; 
         reward: Nat; 
-        image: Blob;
-        organizerId: Principal; 
+        image: ?Blob;
+        communityId: Principal; 
         status: Nat;
+        maxParticipants: Nat;
         participants: [Participant];
     };
 
-    // Organizer Types
-    type Organizer = {
+    // Community Types
+    type Community = {
         id: Principal;
         name: Text;
     };
@@ -140,36 +142,36 @@ actor Lumora {
         transfer_fee = 0;
     };
 
-    // Organizer Storage
-    stable var organizerStorage : [(Principal, Organizer)] = [];
-    var organizerStore = Map.HashMap<Principal, Organizer>(0, Principal.equal, Principal.hash);
+    // Community Storage
+    stable var communityStorage : [(Principal, Community)] = [];
+    var communityStore = Map.HashMap<Principal, Community>(0, Principal.equal, Principal.hash);
 
     // Participant Storage
     stable var participantStorage : [(Principal, Participant)] = [];
     var participantStore = Map.HashMap<Principal, Participant>(0, Principal.equal, Principal.hash);
 
-    // Event Storage
-    private stable var nextEventId : EventId = 0;
-    stable var eventStorage : [(Principal, [Event])] = [];
-    var eventStore = Map.HashMap<Principal, [Event]>(0, Principal.equal, Principal.hash);
+    // Project Storage
+    private stable var nextProjectId : ProjectId = 0;
+    stable var projectStorage : [(Principal, [Project])] = [];
+    var projectStore = Map.HashMap<Principal, [Project]>(0, Principal.equal, Principal.hash);
 
     // ===== SYSTEM FUNCTIONS =====
     system func preupgrade() {
-        organizerStorage := Iter.toArray(organizerStore.entries());
-        eventStorage := Iter.toArray(eventStore.entries());
+        communityStorage := Iter.toArray(communityStore.entries());
+        projectStorage := Iter.toArray(projectStore.entries());
         participantStorage := Iter.toArray(participantStore.entries());
         persistedLog := log.toArray();
     };
 
     system func postupgrade() {
-        organizerStore := Map.HashMap<Principal, Organizer>(organizerStorage.size(), Principal.equal, Principal.hash);
-        for ((key, value) in organizerStorage.vals()) {
-            organizerStore.put(key, value);
+        communityStore := Map.HashMap<Principal, Community>(communityStorage.size(), Principal.equal, Principal.hash);
+        for ((key, value) in communityStorage.vals()) {
+            communityStore.put(key, value);
         };
 
-        eventStore := Map.HashMap<Principal, [Event]>(eventStorage.size(), Principal.equal, Principal.hash);
-        for ((key, value) in eventStorage.vals()) {
-            eventStore.put(key, value);
+        projectStore := Map.HashMap<Principal, [Project]>(projectStorage.size(), Principal.equal, Principal.hash);
+        for ((key, value) in projectStorage.vals()) {
+            projectStore.put(key, value);
         };
 
         participantStore := Map.HashMap<Principal, Participant>(participantStorage.size(), Principal.equal, Principal.hash);
@@ -407,51 +409,42 @@ actor Lumora {
                         balance -= burn.amount;
                     };
                 };
+                case (#Approve(args)) {
+                    if (accountsEqual(args.from, account)) { balance -= transaction.fee };
+                };
             };
         };
         return balance;
     };
 
-    public shared ({ caller }) func getParticipantBalance() : async Result<Nat, Text> {
+    public shared ({ caller }) func getCommunityBalance() : async Result<Nat, Text> {
         if (Principal.isAnonymous(caller)) {
             return #Err("Anonymous participants cannot get balance");
         };
 
-        if (Option.isNull(participantStore.get(caller))) {
-            return #Err("Participant not found");
+        if (Option.isNull(communityStore.get(caller))) {
+            return #Err("Community not found");
         };
 
         return #Ok(await getBalance({ owner = caller; subaccount = null }));
     };
 
-    public shared ({ caller }) func getOrganizerBalance() : async Result<Nat, Text> {
-        if (Principal.isAnonymous(caller)) {
-            return #Err("Anonymous participants cannot get balance");
-        };
-
-        if (Option.isNull(organizerStore.get(caller))) {
-            return #Err("Organizer not found");
-        };
-
-        return #Ok(await getBalance({ owner = caller; subaccount = null }));
-    };
-
-    public shared ({ caller }) func mintToOrganizer(organizerId: Principal, amount: Nat) : async Result<Text, Text> {
+    public shared ({ caller }) func mintToCommunity(communityId: Principal, amount: Nat) : async Result<Text, Text> {
         if (not isAdmin(caller)) {
             return #Err("Only admin can mint tokens");
         };
 
-        switch (organizerStore.get(organizerId)) {
-            case null { return #Err("Organizer not found"); };
-            case (?organizer) {
+        switch (communityStore.get(communityId)) {
+            case null { return #Err("Community not found"); };
+            case (?community) {
                 let now = Nat64.fromNat(Int.abs(Time.now()));
                 
                 let mintOp : Transaction = {
                     operation = #Mint({
                         from = tokenConfig.minting_account;
-                        to = { owner = organizerId; subaccount = null };
+                        to = { owner = communityId; subaccount = null };
                         amount = amount;
-                        memo = ?"Mint to organizer";
+                        memo = ?"Mint to community";
                         created_at_time = ?now;
                         fee = null;
                         source = #Icrc1Transfer;
@@ -478,7 +471,7 @@ actor Lumora {
             return #Err("Anonymous users cannot register");
         };
 
-        if (Option.isSome(participantStore.get(caller)) or Option.isSome(organizerStore.get(caller)) or isAdmin(caller)) {
+        if (Option.isSome(participantStore.get(caller)) or Option.isSome(communityStore.get(caller)) or isAdmin(caller)) {
             return #Err("You are already registered");
         };
 
@@ -492,8 +485,8 @@ actor Lumora {
                 participantStore.put(caller, participant);
                 return #Ok("Successfully registered as participant");
             };
-            case "organizer" {
-                let organizer : Organizer = {
+            case "community" {
+                let community : Community = {
                     id = caller;
                     name = params.name;
                 };
@@ -507,11 +500,11 @@ actor Lumora {
                     memo = null;
                     created_at_time = null;
                 });
-                organizerStore.put(caller, organizer);
-                return #Ok("Successfully registered as organizer");
+                communityStore.put(caller, community);
+                return #Ok("Successfully registered as community");
             };
             case _ {
-                return #Err("Invalid role. Must be either 'participant' or 'organizer'");
+                return #Err("Invalid role. Must be either 'participant' or 'community'");
             };
         };
     };
@@ -524,225 +517,235 @@ actor Lumora {
         };
     };
 
-    // Organizer Functions
-    type CreateOrganizerParams = {
+    // Community Functions
+    type CreateCommunityParams = {
         name: Text;
     };
     
-    public shared ({ caller }) func getOrganizer() : async Result<Organizer, Text> {
-        switch (organizerStore.get(caller)) {
-            case null { return #Err("Organizer not found"); };
-            case (?organizer) { return #Ok(organizer); };
+    public shared ({ caller }) func getCommunity() : async Result<Community, Text> {
+        switch (communityStore.get(caller)) {
+            case null { return #Err("Community not found"); };
+            case (?community) { return #Ok(community); };
         };
     };
 
-    // Event Functions
-    type CreateEventParams = {
+    // Project Functions
+    type CreateProjectParams = {
         title: Text;
         description: Text;
         expiredAt: Time.Time;
         reward: Nat;
-        image: Blob;
+        image: ?Blob;
+        category: Text;
+        maxParticipants: Nat;
     };
 
-    public shared ({ caller }) func createEvent(params: CreateEventParams) : async Result<EventId, Text> {
-        if (Option.isNull(organizerStore.get(caller))) { 
-            return #Err("Only organizers can create events");
+    public shared ({ caller }) func createProject(params: CreateProjectParams) : async Result<ProjectId, Text> {
+        if (Option.isNull(communityStore.get(caller))) { 
+            return #Err("Only communities can create projects");
         };
         
-        let event : Event = {
-            id = nextEventId;
+        let project : Project = {
+            id = nextProjectId;
             title = params.title;
             description = params.description;
             createdAt = Time.now(); 
             expiredAt = params.expiredAt;
             reward = params.reward;
             image = params.image;
-            organizerId = caller;
-            status = 0;
+            communityId = caller;
+            status = 1; // Set status to active by default
             participants = [];
+            category = params.category;
+            maxParticipants = params.maxParticipants;
         }; 
 
-        nextEventId += 1;
+        nextProjectId += 1;
+
+        // Get existing projects for this community
+        let existingProjects = switch (projectStore.get(caller)) {
+            case null { [] };
+            case (?projects) { projects };
+        };
         
-        eventStore.put(caller, [event]);
-        return #Ok(event.id);
+        // Append new project to existing projects
+        let updatedProjects = Array.append(existingProjects, [project]);
+        projectStore.put(caller, updatedProjects);
+        
+        return #Ok(project.id);
     };
 
-    public shared ({ caller }) func getEvents() : async Result<[Event], Text> {
-        if (Option.isNull(organizerStore.get(caller))) {
-            return #Err("Only organizers can get events");
+    public query func getProjects() : async Result<[Project], Text> {
+        var allProjects : [Project] = [];
+        for ((_, projects) in projectStore.entries()) {
+            allProjects := Array.append(allProjects, projects);
         };
-        switch (eventStore.get(caller)) {
-            case null { return #Ok([]); };
-            case (?events) { return #Ok(events); };
-        };
+        return #Ok(allProjects);
     };
 
-    public shared ({ caller }) func getEvent(id: EventId) : async Result<Event, Text> {
-        if (Option.isNull(organizerStore.get(caller))) {
-            return #Err("Only organizers can get events");
-        };
-        switch (eventStore.get(caller)) {
-            case null { return #Err("No events found"); };
-            case (?events) {
-                for (event in events.vals()) {
-                    if (event.id == id) {
-                        return #Ok(event);
-                    };
+    public func getProject(id: ProjectId) : async Result<Project, Text> {
+        for ((_, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                if (project.id == id) {
+                    return #Ok(project);
                 };
             };
         };
-        return #Err("Event not found");
+        return #Err("Project not found");
     };
 
-    public shared ({ caller }) func deleteEvent(eventId: EventId) : async Result<Text, Text> {
-        if (Option.isNull(organizerStore.get(caller))) {
-            return #Err("Only organizers can delete events");
+    public shared ({ caller }) func deleteProject(projectId: ProjectId) : async Result<Text, Text> {
+        if (Option.isNull(communityStore.get(caller))) {
+            return #Err("Only communities can delete projects");
         };
 
-        switch (eventStore.get(caller)) {
-            case null { return #Err("No events found") };
-            case (?events) {
-                let filteredEvents = Array.filter<Event>(events, func(event) = event.id != eventId);
+        switch (projectStore.get(caller)) {
+            case null { return #Err("No projects found") };
+            case (?projects) {
+                let filteredProjects = Array.filter<Project>(projects, func(project) = project.id != projectId);
                 
-                if (filteredEvents.size() == events.size()) {
-                    return #Err("Event not found or you don't have permission to delete this event");
+                if (filteredProjects.size() == projects.size()) {
+                    return #Err("Project not found or you don't have permission to delete this project");
                 };
 
-                eventStore.put(caller, filteredEvents);
-                return #Ok("Event deleted successfully");
+                projectStore.put(caller, filteredProjects);
+                return #Ok("Project deleted successfully");
             };
         };
     };
 
-    public shared ({ caller }) func joinEvent(eventId: EventId) : async Result<Text, Text> {
+    public shared ({ caller }) func joinProject(projectId: ProjectId) : async Result<Text, Text> {
         if (Principal.isAnonymous(caller)) {
-            return #Err("Anonymous participants cannot join events");
+            return #Err("Anonymous participants cannot join projects");
         };
 
         let participantResult = participantStore.get(caller);
         switch (participantResult) {
             case null { return #Err("Participant not found") };
             case (?participant) {
-                switch (eventStore.get(caller)) {
-                    case (?events) {
-                        for (event in events.vals()) {
-                            if (event.id == eventId) {
-                                return #Err("You have already joined this event");
+                switch (projectStore.get(caller)) {
+                    case (?projects) {
+                        for (project in projects.vals()) {
+                            if (project.id == projectId) {
+                                return #Err("You have already joined this project");
                             };
                         };
                     };
                     case null {};
                 };
 
-                let eventResult = await getEvent(eventId);
-                switch (eventResult) {
+                let projectResult = await getProject(projectId);
+                switch (projectResult) {
                     case (#Err(msg)) { return #Err(msg) };
-                    case (#Ok(event)) {
-                        if (event.status == 0) {
-                            return #Err("Event is not active");
+                    case (#Ok(project)) {
+                        if (project.status == 0) {
+                            return #Err("Project is not active");
                         };
-                        if (event.expiredAt < Time.now()) {
-                            return #Err("Event has expired");
+                        if (project.expiredAt < Time.now()) {
+                            return #Err("Project has expired");
                         };
-
-                        let updatedEvent : Event = {
-                            id = event.id;
-                            title = event.title;
-                            description = event.description;
-                            createdAt = event.createdAt;
-                            expiredAt = event.expiredAt;
-                            reward = event.reward;
-                            image = event.image;
-                            organizerId = event.organizerId;
-                            status = event.status;
-                            participants = Array.append(event.participants, [participant]);
+                        if (project.participants.size() >= project.maxParticipants) {
+                            return #Err("Project has reached maximum participants");
                         };
 
-                        eventStore.put(event.organizerId, [updatedEvent]);
-                        return #Ok("Successfully joined the event");
+                        let updatedProject : Project = {
+                            id = project.id;
+                            title = project.title;
+                            description = project.description;
+                            createdAt = project.createdAt;
+                            expiredAt = project.expiredAt;
+                            reward = project.reward;
+                            image = project.image;
+                            communityId = project.communityId;
+                            status = project.status;
+                            participants = Array.append(project.participants, [participant]);
+                            category = project.category;
+                            maxParticipants = project.maxParticipants;
+                        };
+
+                        projectStore.put(project.communityId, [updatedProject]);
+                        return #Ok("Successfully joined the project");
                     };
                 };
             };
         };
     };
 
-    public shared ({ caller }) func getParticipantEvents(participantId: Principal) : async [Event] {
-        var participantEvents : [Event] = [];
+    public shared ({ caller }) func getParticipantProjects(participantId: Principal) : async [Project] {
+        var participantProjects : [Project] = [];
         
-        for ((organizerId, events) in eventStore.entries()) {
-            for (event in events.vals()) {
-                for (participant in event.participants.vals()) {
+        for ((communityId, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                for (participant in project.participants.vals()) {
                     if (participant.id == participantId) {
-                        participantEvents := Array.append(participantEvents, [event]);
+                        participantProjects := Array.append(participantProjects, [project]);
                     };
                 };
             };
         };
         
-        return participantEvents;
+        return participantProjects;
     };
 
-    public shared ({ caller }) func rewardParticipant(eventId: EventId, participantId: Principal) : async Result<Text, Text> {
-        if (Option.isNull(organizerStore.get(caller))) {
-            return #Err("Only organizers can reward participants");
+    public shared ({ caller }) func rewardParticipant(projectId: ProjectId, participantId: Principal) : async Result<Text, Text> {
+        if (Option.isNull(communityStore.get(caller))) {
+            return #Err("Only communities can reward participants");
         };
 
         switch (participantStore.get(participantId)) {
             case null { return #Err("Participant not found"); };
             case (?participant) {
-                let eventResult = await getEvent(eventId);
-                switch (eventResult) {
+                let projectResult = await getProject(projectId);
+                switch (projectResult) {
                     case (#Err(msg)) { return #Err(msg) };
-                    case (#Ok(event)) {
-                        if (event.organizerId != caller) {
-                            return #Err("Event not owned by this organizer");
+                    case (#Ok(project)) {
+                        if (project.communityId != caller) {
+                            return #Err("Project not owned by this community");
                         };
 
-                        if (event.status != 1) { 
-                            return #Err("Event is not active");
+                        if (project.status != 1) { 
+                            return #Err("Project is not active");
                         };
 
-                        if (event.expiredAt < Time.now()) {
-                            return #Err("Event has expired");
+                        if (project.expiredAt < Time.now()) {
+                            return #Err("Project has expired");
                         };
 
                         var isParticipantJoined = false;
-                        for (p in event.participants.vals()) {
+                        for (p in project.participants.vals()) {
                             if (p.id == participantId) {
                                 isParticipantJoined := true;
                             };
                         };
 
                         if (not isParticipantJoined) {
-                            return #Err("Participant has not joined this event");
+                            return #Err("Participant has not joined this project");
                         };
 
-                        let participantEvents = await getParticipantEvents(participantId);
-                        for (participantEvent in participantEvents.vals()) {
-                            if (participantEvent.id == eventId) {
-                                return #Err("Participant has already received reward for this event");
+                        let participantProjects = await getParticipantProjects(participantId);
+                        for (participantProject in participantProjects.vals()) {
+                            if (participantProject.id == projectId) {
+                                return #Err("Participant has already received reward for this project");
                             };
                         };
 
-                        let organizerBalance = await getOrganizerBalance();
-                        switch (organizerBalance) {
+                        let communityBalance = await getCommunityBalance();
+                        switch (communityBalance) {
                             case (#Err(msg)) { return #Err(msg) };
                             case (#Ok(balance)) {
-                                if (balance < event.reward) {
-                                    return #Err("Organizer does not have enough balance to reward participant");
+                                if (balance < project.reward) {
+                                    return #Err("Community does not have enough balance to reward participant");
                                 };
                             };
                         };
 
                         let now = Nat64.fromNat(Int.abs(Time.now()));
-                        let memoText = "Reward for event: " # Nat32.toText(event.id);
+                        let memoText = "Reward for project: " # Nat32.toText(project.id);
                         let transferOp : Transaction = {
                             operation = #Transfer({
                                 from = { owner = caller; subaccount = null };
                                 to = { owner = participantId; subaccount = null };
-                                amount = event.reward;
+                                amount = project.reward;
                                 memo = ?Text.encodeUtf8(memoText);
                                 created_at_time = ?now;
                                 fee = null;
@@ -753,21 +756,23 @@ actor Lumora {
                             timestamp = now;
                         };
 
-                        let updatedEvent : Event = {
-                            id = event.id;
-                            title = event.title;
-                            description = event.description;
-                            createdAt = event.createdAt;
-                            expiredAt = event.expiredAt;
-                            reward = event.reward;
-                            image = event.image;
-                            organizerId = event.organizerId;
-                            status = event.status;
-                            participants = event.participants;
+                        let updatedProject : Project = {
+                            id = project.id;
+                            title = project.title;
+                            description = project.description;
+                            createdAt = project.createdAt;
+                            expiredAt = project.expiredAt;
+                            reward = project.reward;
+                            image = project.image;
+                            communityId = project.communityId;
+                            status = project.status;
+                            participants = project.participants;
+                            category = project.category;
+                            maxParticipants = project.maxParticipants;
                         };
 
                         log.add(transferOp);
-                        eventStore.put(caller, [updatedEvent]);
+                        projectStore.put(caller, [updatedProject]);
 
                         return #Ok("Participant rewarded successfully");
                     };

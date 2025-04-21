@@ -13,7 +13,9 @@
   },
   "type": "module",
   "workspaces": [
-    "src/lumora_frontend"
+    "src/frontend"
   ],
-  "dependencies": {}
+  "dependencies": {
+    "@dfinity/agent": "^2.4.1"
+  }
 }
