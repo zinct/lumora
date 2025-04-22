@@ -16,6 +16,6 @@
     "src/frontend"
   ],
   "dependencies": {
-    "@dfinity/agent": "^2.4.1"
+    "@radix-ui/react-switch": "^1.2.2"
   }
 }

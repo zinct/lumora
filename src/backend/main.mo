@@ -509,6 +509,61 @@ actor Lumora {
         };
     };
 
+    public shared func getAllUsers() : async ?[(Text, Text, Nat)] {
+        let allUsers = Buffer.Buffer<(Text, Text, Nat)>(0);
+
+        for ((id, participant) in participantStore.entries()) {
+            let balance = await getBalance({ owner = id; subaccount = null });
+            allUsers.add(("Participant", participant.name, balance));
+        };
+        
+        for ((id, community) in communityStore.entries()) {
+            let balance = await getBalance({ owner = id; subaccount = null });
+            allUsers.add(("Community", community.name, balance));
+        };
+
+        ?Buffer.toArray(allUsers)
+    };
+
+    public shared ({ caller }) func getProfile() : async Result<Text, Text> {
+        if (Principal.isAnonymous(caller)) { 
+            return #Err("Anonymous users cannot login"); 
+        };
+
+        if (Option.isSome(participantStore.get(caller))) {
+            switch (participantStore.get(caller)) { 
+                case (?participant) {
+                    let profile = {
+                        id = participant.id;
+                        name = participant.name;
+                        role = "participant";
+                    };
+                    return #Ok(debug_show(profile));
+                };
+                case null {
+                    return #Err("Participant not found");
+                };
+            };
+        };
+        if (Option.isSome(communityStore.get(caller))) {
+            switch (communityStore.get(caller)) {
+                case (?community) {
+                    let profile = {
+                        id = community.id;
+                        name = community.name;
+                        role = "community"; 
+                    };
+                    return #Ok(debug_show(profile));
+                };
+                case null {
+                    return #Err("Community not found");
+                };
+            };
+        };
+
+        return #Err("User not registered");
+    };
+
     // Participant Functions
     public shared ({ caller }) func getParticipant() : async Result<Participant, Text> {
         switch (participantStore.get(caller)) {
@@ -583,11 +638,45 @@ actor Lumora {
         return #Ok(allProjects);
     };
 
-    public func getProject(id: ProjectId) : async Result<Project, Text> {
-        for ((_, projects) in projectStore.entries()) {
+    type GetProjectResult = {
+        id: ProjectId; 
+        title: Text; 
+        description: Text;
+        category: Text;
+        createdAt: Time.Time; 
+        expiredAt: Time.Time; 
+        reward: Nat; 
+        image: ?Blob;
+        status: Nat;
+        maxParticipants: Nat;
+        participants: [Participant];
+        communityId: Principal; 
+        communityName: Text;
+    };
+
+    public func getProject(id: ProjectId) : async Result<GetProjectResult, Text> {
+        for ((communityId, projects) in projectStore.entries()) {
             for (project in projects.vals()) {
                 if (project.id == id) {
-                    return #Ok(project);
+                    let community = switch (communityStore.get(communityId)) {
+                        case null { return #Err("Community not found") };
+                        case (?c) { c };
+                    };
+                    return #Ok({
+                        id = project.id;
+                        title = project.title;
+                        description = project.description;
+                        category = project.category;
+                        createdAt = project.createdAt;
+                        expiredAt = project.expiredAt;
+                        reward = project.reward;
+                        image = project.image;
+                        status = project.status;
+                        maxParticipants = project.maxParticipants;
+                        participants = project.participants;
+                        communityId = communityId;
+                        communityName = community.name;
+                    });
                 };
             };
         };
