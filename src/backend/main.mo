@@ -84,14 +84,17 @@ actor Lumora {
         title: Text; 
         description: Text;
         category: Text;
-        createdAt: Time.Time; 
+        createdAt: Time.Time;
+        startDate: Time.Time;
         expiredAt: Time.Time; 
         reward: Nat; 
         image: ?Blob;
         communityId: Principal; 
-        status: Nat;
+        status: Nat; // 0: inactive, 1: active, 2: upcoming, 3: closed
         maxParticipants: Nat;
         participants: [Participant];
+        address: Text;
+        impact: Text;
     };
 
     // Community Types
@@ -588,11 +591,32 @@ actor Lumora {
     type CreateProjectParams = {
         title: Text;
         description: Text;
+        startDate: Time.Time;
         expiredAt: Time.Time;
         reward: Nat;
         image: ?Blob;
         category: Text;
         maxParticipants: Nat;
+        address: Text;
+        impact: Text;
+    };
+
+    private func calculateProjectStatus(startDate: Time.Time, expiredAt: Time.Time, currentStatus: Nat) : Nat {
+        let now = Time.now();
+        
+        if (currentStatus == 0) {
+            return 0;
+        };
+
+        if (now < startDate) {
+            return 2;
+        };
+
+        if (now > expiredAt) {
+            return 3;
+        };
+
+        return 1;
     };
 
     public shared ({ caller }) func createProject(params: CreateProjectParams) : async Result<ProjectId, Text> {
@@ -600,50 +624,48 @@ actor Lumora {
             return #Err("Only communities can create projects");
         };
         
+        if (params.startDate >= params.expiredAt) {
+            return #Err("Start date must be before end date");
+        };
+        
         let project : Project = {
             id = nextProjectId;
             title = params.title;
             description = params.description;
-            createdAt = Time.now(); 
+            createdAt = Time.now();
+            startDate = params.startDate;
             expiredAt = params.expiredAt;
             reward = params.reward;
             image = params.image;
             communityId = caller;
-            status = 1; // Set status to active by default
+            status = 1;
             participants = [];
             category = params.category;
             maxParticipants = params.maxParticipants;
+            address = params.address;
+            impact = params.impact;
         }; 
 
         nextProjectId += 1;
 
-        // Get existing projects for this community
         let existingProjects = switch (projectStore.get(caller)) {
             case null { [] };
             case (?projects) { projects };
         };
         
-        // Append new project to existing projects
         let updatedProjects = Array.append(existingProjects, [project]);
         projectStore.put(caller, updatedProjects);
         
         return #Ok(project.id);
     };
 
-    public query func getProjects() : async Result<[Project], Text> {
-        var allProjects : [Project] = [];
-        for ((_, projects) in projectStore.entries()) {
-            allProjects := Array.append(allProjects, projects);
-        };
-        return #Ok(allProjects);
-    };
-
-    type GetProjectResult = {
+    public type GetProjectResult = {
         id: ProjectId; 
         title: Text; 
         description: Text;
         category: Text;
-        createdAt: Time.Time; 
+        createdAt: Time.Time;
+        startDate: Time.Time;
         expiredAt: Time.Time; 
         reward: Nat; 
         image: ?Blob;
@@ -652,7 +674,44 @@ actor Lumora {
         participants: [Participant];
         communityId: Principal; 
         communityName: Text;
+        address: Text;
+        impact: Text;
     };
+    public query func getProjects() : async Result<[GetProjectResult], Text> {
+        var allProjects : [GetProjectResult] = [];
+        for ((communityId, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                let community = switch (communityStore.get(communityId)) {
+                    case null { return #Err("Community not found") };
+                    case (?c) { c };
+                };
+
+                let currentStatus = calculateProjectStatus(project.startDate, project.expiredAt, project.status);
+
+                let projectResult : GetProjectResult = {
+                    id = project.id;
+                    title = project.title;
+                    description = project.description;
+                    category = project.category;
+                    createdAt = project.createdAt;
+                    startDate = project.startDate;
+                    expiredAt = project.expiredAt;
+                    reward = project.reward;
+                    image = project.image;
+                    status = currentStatus;
+                    maxParticipants = project.maxParticipants;
+                    participants = project.participants;
+                    communityId = communityId;
+                    communityName = community.name;
+                    address = project.address;
+                    impact = project.impact;
+                };
+                allProjects := Array.append(allProjects, [projectResult]);
+            };
+        };
+        return #Ok(allProjects);
+    };
+   
 
     public func getProject(id: ProjectId) : async Result<GetProjectResult, Text> {
         for ((communityId, projects) in projectStore.entries()) {
@@ -668,6 +727,7 @@ actor Lumora {
                         description = project.description;
                         category = project.category;
                         createdAt = project.createdAt;
+                        startDate = project.startDate;
                         expiredAt = project.expiredAt;
                         reward = project.reward;
                         image = project.image;
@@ -676,6 +736,8 @@ actor Lumora {
                         participants = project.participants;
                         communityId = communityId;
                         communityName = community.name;
+                        address = project.address;
+                        impact = project.impact;
                     });
                 };
             };
@@ -742,6 +804,7 @@ actor Lumora {
                             title = project.title;
                             description = project.description;
                             createdAt = project.createdAt;
+                            startDate = project.startDate;
                             expiredAt = project.expiredAt;
                             reward = project.reward;
                             image = project.image;
@@ -750,6 +813,8 @@ actor Lumora {
                             participants = Array.append(project.participants, [participant]);
                             category = project.category;
                             maxParticipants = project.maxParticipants;
+                            address = project.address;
+                            impact = project.impact;
                         };
 
                         projectStore.put(project.communityId, [updatedProject]);
@@ -850,6 +915,7 @@ actor Lumora {
                             title = project.title;
                             description = project.description;
                             createdAt = project.createdAt;
+                            startDate = project.startDate;
                             expiredAt = project.expiredAt;
                             reward = project.reward;
                             image = project.image;
@@ -858,6 +924,8 @@ actor Lumora {
                             participants = project.participants;
                             category = project.category;
                             maxParticipants = project.maxParticipants;
+                            address = project.address;
+                            impact = project.impact;
                         };
 
                         log.add(transferOp);
