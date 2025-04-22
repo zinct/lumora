@@ -11,21 +11,24 @@ import NFTsPage from "./pages/nft/nft-list-page";
 import ProjectDetailPage from "./pages/project/project-detail-page";
 import CommunityDashboardPage from "./pages/community-page";
 import BalancePage from "./pages/balance-page";
+import { AuthProvider } from "@/core/providers/auth-provider";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomeLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="/projects" element={<ProjectListPage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          <Route path="/resources" element={<ResourcePage />} />
-          <Route path="/nfts" element={<NFTsPage />} />
-          <Route path="/community" element={<CommunityDashboardPage />} />
-          <Route path="/balance" element={<BalancePage />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<HomeLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="/projects" element={<ProjectListPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route path="/resources" element={<ResourcePage />} />
+            <Route path="/nfts" element={<NFTsPage />} />
+            <Route path="/community" element={<CommunityDashboardPage />} />
+            <Route path="/balance" element={<BalancePage />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );
