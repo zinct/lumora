@@ -172,7 +172,7 @@ for i in {0..29}; do
         startDate = ${START_DATE}; 
         expiredAt = ${END_DATE}; 
         reward = ${RANDOM_REWARD}; 
-        image = null; 
+        imageUrl = null; 
         category = \"${CATEGORIES[$(($i % 20))]}\"; 
         maxParticipants = ${RANDOM_MAX_PARTICIPANTS};
         impact = \"${IMPACTS[$IMPACT_INDEX]}\";

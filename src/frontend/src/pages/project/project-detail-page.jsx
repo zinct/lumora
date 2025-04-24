@@ -1,57 +1,38 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/core/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/core/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Badge } from "@/core/components/ui/badge";
-import { Progress } from "@/core/components/ui/progress";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/core/components/ui/tabs";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/core/components/ui/avatar";
+import { AssetManager } from "@dfinity/assets";
+import { canisterId as assetsCanisterId } from "declarations/assets";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
+import { Avatar, AvatarImage } from "@/core/components/ui/avatar";
 import { SubmitEvidenceForm } from "@/core/components/community/submit-evidence-form";
 import { SubmissionStatus } from "@/core/components/community/submission-status";
 import { useToast } from "@/core/hooks/use-toast";
-import {
-  ArrowLeft,
-  Calendar,
-  CheckCircle,
-  Clock,
-  FileText,
-  Leaf,
-  MapPin,
-  Share2,
-  Users,
-  Award,
-  CloudCog,
-} from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Leaf, MapPin, Share2, Users, Award, Ban, CalendarClock, Clock, HelpCircle, CircleGauge } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { backend } from "declarations/backend";
 import { useAuth } from "@/core/providers/auth-provider";
+import { Actor } from "@dfinity/agent";
+import { getAssetManagerNetwork } from "@/core/lib/canisterUtils";
 
 export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login, identity } = useAuth();
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isSubmittingEvidence, setIsSubmittingEvidence] = useState(false);
   const [userSubmission, setUserSubmission] = useState(null);
   const [hasJoined, setHasJoined] = useState(false);
 
-  console.log("project", project);
+  const assetManager = new AssetManager({
+    canisterId: assetsCanisterId,
+    agent: Actor.agentOf(backend),
+  });
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
@@ -69,7 +50,7 @@ export default function ProjectDetailPage() {
             createdAt: new Date(Number(projectData.createdAt) / 1000000),
             expiredAt: new Date(Number(projectData.expiredAt) / 1000000),
             reward: projectData.reward,
-            image: projectData.image,
+            imageUrl: projectData.imageUrl,
             communityId: projectData.communityId,
             communityName: projectData.communityName,
             status: projectData.status,
@@ -79,11 +60,28 @@ export default function ProjectDetailPage() {
             impact: projectData.impact,
           });
 
+          const userEvidence = projectData.evidence.find((evidence) => evidence.participantId.toString() === user.id);
+          console.log("projectData", userEvidence);
+
+          // console.log(object);
+
+          if (userEvidence) {
+            setUserSubmission({
+              id: userEvidence.id,
+              status: userEvidence.status,
+              submittedAt: new Date(Number(userEvidence.timestamp) / 1000000).toISOString(),
+              evidence: userEvidence.description,
+              files: userEvidence.imageUrl.map((url, index) => ({
+                name: `Evidence ${index + 1}`,
+                url: url,
+              })),
+              feedback: userEvidence.feedback,
+            });
+          }
+
           // Check if user has joined the project
           if (isAuthenticated && user) {
-            const hasJoinedProject = projectData.participants.some(
-              (participant) => participant.id === user.id
-            );
+            const hasJoinedProject = projectData.participants.some((participant) => participant.id.toString() === user.id);
             setHasJoined(hasJoinedProject);
           }
         } else {
@@ -110,32 +108,121 @@ export default function ProjectDetailPage() {
     fetchProject();
   }, [id, isAuthenticated, user, navigate, toast]);
 
-  const handleSubmitEvidence = (data) => {
-    // In a real app, this would be an API call to submit evidence
-    setUserSubmission({
-      id: Date.now(),
-      status: "Pending",
-      submittedAt: new Date().toISOString(),
-      evidence: data.description,
-      files: data.files,
-    });
+  // Update handleSubmitEvidence to refresh project data after submission
+  const handleSubmitEvidence = async (data) => {
+    // console.log(identity.getPrincipal().toText());
 
-    toast({
-      title: "Evidence submitted successfully",
-      description:
-        "Your submission is now pending review by project administrators.",
-    });
+    try {
+      setIsSubmittingEvidence(true);
+
+      if (!identity) {
+        toast({
+          title: "Error",
+          description: "Please login first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const batch = assetManager.batch();
+      const uploadedImageUrls = [];
+
+      // Process each file
+      for (const file of data.files) {
+        try {
+          console.log("Processing file:", file);
+
+          const fileName = crypto.randomUUID();
+          console.log("file", fileName);
+
+          const key = await batch.store(file, {
+            path: "/evidence",
+            fileName,
+            contentType: file.type,
+          });
+
+          uploadedImageUrls.push(key);
+        } catch (fileError) {
+          console.error("Error processing file:", fileError);
+          toast({
+            title: "Error",
+            description: `Failed to process file ${file.name}: ${fileError.message}`,
+            variant: "destructive",
+          });
+          continue;
+        }
+      }
+
+      if (uploadedImageUrls.length === 0) {
+        toast({
+          title: "Error",
+          description: "No valid files were processed",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Commit the batch upload
+      await batch.commit();
+
+      // Submit evidence to backend
+      const response = await backend.submitEvidence({
+        projectId: parseInt(id),
+        description: data.description,
+        imageUrl: uploadedImageUrls,
+      });
+
+      if ("Ok" in response) {
+        // Refresh project data to get updated evidence
+        const updatedProject = await backend.getProject(parseInt(id));
+        if ("Ok" in updatedProject) {
+          setProject(updatedProject.Ok);
+        }
+
+        toast({
+          title: "Success",
+          description: "Evidence submitted successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: response.Err,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error submitting evidence:", error);
+      if (error.message.includes("Caller does not have Prepare permission")) {
+        toast({
+          title: "Error",
+          description: "You are not authorized to upload files. Please contact the administrator.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit evidence",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSubmittingEvidence(false);
+    }
   };
 
   const handleJoinProject = async () => {
+    setIsJoining(true);
     if (!isAuthenticated) {
-      navigate("/login");
+      login();
       return;
     }
 
     try {
       const projectId = parseInt(id);
       const response = await backend.joinProject(projectId);
+      setIsJoining(false);
+
+      console.log("response", response);
 
       if ("Ok" in response) {
         setHasJoined(true);
@@ -160,6 +247,47 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const renderProjectStatus = (status) => {
+    status = parseInt(status);
+    switch (status) {
+      case 0: // inactive
+        return (
+          <Badge variant="secondary" className="bg-red-500/20 text-red-400">
+            <Ban className="h-3 w-3 mr-1" />
+            Inactive
+          </Badge>
+        );
+      case 1: // active
+        return (
+          <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400">
+            <Leaf className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        );
+      case 2: // upcoming
+        return (
+          <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+            <CalendarClock className="h-3 w-3 mr-1" />
+            Upcoming
+          </Badge>
+        );
+      case 3: // closed
+        return (
+          <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
+            <Clock className="h-3 w-3 mr-1" />
+            Closed
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
+            <HelpCircle className="h-3 w-3 mr-1" />
+            Unknown
+          </Badge>
+        );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -181,30 +309,20 @@ export default function ProjectDetailPage() {
         <main className="flex-1 container py-8">
           <div className="flex flex-col items-center justify-center h-64">
             <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
-            <p className="text-muted-foreground mb-4">
-              The project you're looking for doesn't exist or has been removed.
-            </p>
-            <Button onClick={() => navigate("/projects")}>
-              View All Projects
-            </Button>
+            <p className="text-muted-foreground mb-4">The project you're looking for doesn't exist or has been removed.</p>
+            <Button onClick={() => navigate("/projects")}>View All Projects</Button>
           </div>
         </main>
       </div>
     );
   }
 
-  console.log("project", project);
-
   return (
     <main className="flex-1">
       {/* Hero Banner */}
       <section className="relative h-64 md:h-80 lg:h-96 overflow-hidden border-b border-border/40">
         <img
-          src={URL.createObjectURL(
-            new Blob([project.image[0]], {
-              type: "image/png",
-            })
-          )}
+          src={project.imageUrl ? project.imageUrl : `https://api.dicebear.com/7.x/shapes/svg?seed=${project.title}&backgroundColor=c7d2fe,ddd6fe,fae8ff,dbeafe,bfdbfe,e0e7ff&shape1Color=4f46e5,6d28d9,7c3aed,2563eb,3b82f6,4f46e5`}
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${project.title}&backgroundColor=c7d2fe,ddd6fe,fae8ff,dbeafe,bfdbfe,e0e7ff&shape1Color=4f46e5,6d28d9,7c3aed,2563eb,3b82f6,4f46e5`;
@@ -220,22 +338,15 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
+                  <Badge variant="outline" className="bg-black text-white border-black/20">
                     {project.category}
                   </Badge>
-                  <Badge variant="outline">{project.status}</Badge>
+                  {renderProjectStatus(project.status)}
                 </div>
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-                  {project.title}
-                </h1>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">{project.title}</h1>
                 <div className="flex items-center gap-2 mt-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {project.address}
-                  </span>
+                  <span className="text-muted-foreground">{project.address}</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -255,12 +366,10 @@ export default function ProjectDetailPage() {
                       navigator.clipboard.writeText(window.location.href);
                       toast({
                         title: "Link copied",
-                        description:
-                          "Project link has been copied to clipboard",
+                        description: "Project link has been copied to clipboard",
                       });
                     }
-                  }}
-                >
+                  }}>
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
@@ -277,10 +386,7 @@ export default function ProjectDetailPage() {
             {/* Main Content */}
             <div className="flex-1">
               <div className="mb-6">
-                <a
-                  href="/projects"
-                  className="text-sm text-muted-foreground hover:underline flex items-center"
-                >
+                <a href="/projects" className="text-sm text-muted-foreground hover:underline flex items-center">
                   <ArrowLeft className="h-3 w-3 mr-1" />
                   Back to Projects
                 </a>
@@ -289,9 +395,7 @@ export default function ProjectDetailPage() {
               <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList>
                   <TabsTrigger value="overview">Overview</TabsTrigger>
-                  {isAuthenticated && hasJoined && (
-                    <TabsTrigger value="submit">Submit Evidence</TabsTrigger>
-                  )}
+                  {isAuthenticated && hasJoined && <TabsTrigger value="submit">Submit Evidence</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-6">
@@ -314,30 +418,20 @@ export default function ProjectDetailPage() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col items-center p-4 bg-muted/50 rounded-lg">
                           <Leaf className="h-8 w-8 text-emerald-500 mb-2" />
-                          <h3 className="font-medium text-lg">
-                            {project.impact}
-                          </h3>
-                          <p className="text-sm text-muted-foreground text-center">
-                            Environmental Impact
-                          </p>
+                          <h3 className="font-medium text-lg">{project.impact}</h3>
+                          <p className="text-sm text-muted-foreground text-center">Environmental Impact</p>
                         </div>
                         <div className="flex flex-col items-center p-4 bg-muted/50 rounded-lg">
                           <Users className="h-8 w-8 text-blue-500 mb-2" />
                           <h3 className="font-medium text-lg">
-                            {project.maxParticipants} participants
+                            {project.participants.length} / {project.maxParticipants} participants
                           </h3>
-                          <p className="text-sm text-muted-foreground text-center">
-                            Community Engagement
-                          </p>
+                          <p className="text-sm text-muted-foreground text-center">Community Engagement</p>
                         </div>
                         <div className="flex flex-col items-center p-4 bg-muted/50 rounded-lg">
                           <Award className="h-8 w-8 text-amber-500 mb-2" />
-                          <h3 className="font-medium text-lg">
-                            {project.reward} LUM
-                          </h3>
-                          <p className="text-sm text-muted-foreground text-center">
-                            Total Rewards
-                          </p>
+                          <h3 className="font-medium text-lg">{project.reward} LUM</h3>
+                          <p className="text-sm text-muted-foreground text-center">Total Rewards</p>
                         </div>
                       </div>
                     </CardContent>
@@ -349,9 +443,7 @@ export default function ProjectDetailPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>Submit Evidence</CardTitle>
-                        <CardDescription>
-                          Provide evidence of your participation in this project
-                        </CardDescription>
+                        <CardDescription>Provide evidence of your participation in this project</CardDescription>
                       </CardHeader>
                       <CardContent>
                         {userSubmission ? (
@@ -359,66 +451,41 @@ export default function ProjectDetailPage() {
                             <SubmissionStatus submission={userSubmission} />
 
                             <div className="border rounded-lg p-4">
-                              <h3 className="font-medium mb-2">
-                                Your Submission
-                              </h3>
-                              <div className="text-sm text-muted-foreground mb-4">
-                                Submitted on{" "}
-                                {new Date(
-                                  userSubmission.submittedAt
-                                ).toLocaleString()}
-                              </div>
+                              <h3 className="font-medium mb-2">Your Submission</h3>
+                              <div className="text-sm text-muted-foreground mb-4">Submitted on {new Date(userSubmission.submittedAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
 
                               <div className="space-y-4">
                                 <div>
-                                  <h4 className="text-sm font-medium mb-1">
-                                    Description
-                                  </h4>
-                                  <p className="text-sm">
-                                    {userSubmission.evidence}
-                                  </p>
+                                  <h4 className="text-sm font-medium mb-1">Description</h4>
+                                  <p className="text-sm">{userSubmission.evidence}</p>
                                 </div>
 
-                                {userSubmission.files &&
-                                  userSubmission.files.length > 0 && (
-                                    <div>
-                                      <h4 className="text-sm font-medium mb-2">
-                                        Attached Files
-                                      </h4>
-                                      <div className="space-y-2">
-                                        {userSubmission.files.map(
-                                          (file, index) => (
-                                            <div
-                                              key={index}
-                                              className="flex items-center gap-2 p-2 bg-muted/50 rounded-md"
-                                            >
-                                              <FileText className="h-4 w-4 text-muted-foreground" />
-                                              <div className="flex-1">
-                                                <div className="text-sm font-medium">
-                                                  {file.name}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  {file.size}
-                                                </div>
-                                              </div>
-                                              <Button variant="ghost" size="sm">
-                                                View
-                                              </Button>
+                                {userSubmission.files && userSubmission.files.length > 0 && (
+                                  <div>
+                                    <h4 className="text-sm font-medium mb-2">Attached Files</h4>
+                                    <div className="space-y-2">
+                                      {userSubmission.files.map((file, index) => {
+                                        console.log(file);
+                                        return (
+                                          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                                            <FileText className="h-4 w-4 text-muted-foreground" />
+                                            <div className="flex-1">
+                                              <div className="text-sm font-medium">{file.name}</div>
                                             </div>
-                                          )
-                                        )}
-                                      </div>
+                                            <Button variant="ghost" size="sm" onClick={() => window.open(getAssetManagerNetwork() + file.url, "_blank")}>
+                                              View
+                                            </Button>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  )}
+                                  </div>
+                                )}
 
                                 {userSubmission.feedback && (
                                   <div className="p-3 bg-muted rounded-md">
-                                    <h4 className="text-sm font-medium mb-1">
-                                      Admin Feedback
-                                    </h4>
-                                    <p className="text-sm">
-                                      {userSubmission.feedback}
-                                    </p>
+                                    <h4 className="text-sm font-medium mb-1">Admin Feedback</h4>
+                                    <p className="text-sm">{userSubmission.feedback}</p>
                                   </div>
                                 )}
                               </div>
@@ -426,10 +493,7 @@ export default function ProjectDetailPage() {
 
                             {userSubmission.status === "Rejected" && (
                               <div className="mt-4">
-                                <Button
-                                  className="bg-emerald-600 hover:bg-emerald-700"
-                                  onClick={() => setUserSubmission(null)}
-                                >
+                                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setUserSubmission(null)}>
                                   Submit New Evidence
                                 </Button>
                               </div>
@@ -450,18 +514,11 @@ export default function ProjectDetailPage() {
               {isAuthenticated && !hasJoined && (
                 <Card className="border-emerald-500/50 bg-emerald-500/5">
                   <CardHeader>
-                    <CardTitle className="text-emerald-500">
-                      Join This Project
-                    </CardTitle>
-                    <CardDescription>
-                      Participate and earn rewards
-                    </CardDescription>
+                    <CardTitle className="text-emerald-500">Join This Project</CardTitle>
+                    <CardDescription>Participate and earn rewards</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-4">
-                      Join this project to participate in activities, submit
-                      evidence, and earn LUM tokens as rewards.
-                    </p>
+                    <p className="text-sm mb-4">Join this project to participate in activities, submit evidence, and earn LUM tokens as rewards.</p>
                     <div className="flex items-center gap-2 text-sm mb-2">
                       <Award className="h-4 w-4 text-amber-500" />
                       <span>Earn up to {project.reward} LUM tokens</span>
@@ -469,17 +526,13 @@ export default function ProjectDetailPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-blue-500" />
                       <span>
-                        {project.participants.length} /{" "}
-                        {project.maxParticipants || "∞"} participants
+                        {project.participants.length} / {project.maxParticipants || "∞"} participants
                       </span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      onClick={handleJoinProject}
-                    >
-                      Join Project
+                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleJoinProject} disabled={isJoining}>
+                      {isJoining ? "Joining..." : "Join Project"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -488,33 +541,19 @@ export default function ProjectDetailPage() {
               {isAuthenticated && hasJoined && !userSubmission && (
                 <Card className="border-blue-500/50 bg-blue-500/5">
                   <CardHeader>
-                    <CardTitle className="text-blue-500">
-                      Submit Your Evidence
-                    </CardTitle>
-                    <CardDescription>
-                      Complete project requirements
-                    </CardDescription>
+                    <CardTitle className="text-blue-500">Submit Your Evidence</CardTitle>
+                    <CardDescription>Complete project requirements</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-4">
-                      You've joined this project! Complete the requirements and
-                      submit evidence of your participation to earn rewards.
-                    </p>
+                    <p className="text-sm mb-4">You've joined this project! Complete the requirements and submit evidence of your participation to earn rewards.</p>
                     <div className="flex items-center gap-2 text-sm">
                       <Award className="h-4 w-4 text-amber-500" />
-                      <span>
-                        Earn {project.individualReward} LUM tokens upon approval
-                      </span>
+                      <span>Earn {project.individualReward} LUM tokens upon approval</span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                      onClick={() =>
-                        document.querySelector('[data-value="submit"]').click()
-                      }
-                    >
-                      Submit Evidence
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => document.querySelector('[data-value="submit"]').click()}>
+                      {isSubmittingEvidence ? "Submitting..." : "Submit Evidence"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -526,38 +565,27 @@ export default function ProjectDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">
-                      Community
-                    </div>
+                    <div className="text-sm text-muted-foreground">Community</div>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage
-                          src={`https://api.dicebear.com/7.x/identicon/svg?seed=${project.communityName}`}
-                        />
+                        <AvatarImage src={`https://api.dicebear.com/7.x/identicon/svg?seed=${project.communityName}`} />
                       </Avatar>
-                      <span className="font-medium">
-                        {project.communityName}
-                      </span>
+                      <span className="font-medium">{project.communityName}</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">
-                      Timeline
-                    </div>
+                    <div className="text-sm text-muted-foreground">Timeline</div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>
-                        {project.createdAt.toLocaleDateString()} -{" "}
-                        {project.expiredAt.toLocaleDateString()}
+                        {project.createdAt.toLocaleDateString()} - {project.expiredAt.toLocaleDateString()}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">
-                      Reward per Participant
-                    </div>
+                    <div className="text-sm text-muted-foreground">Reward per Participant</div>
                     <div className="flex items-center gap-2">
                       <Leaf className="h-4 w-4 text-emerald-500" />
                       <span>{project.reward} LUM</span>
@@ -566,10 +594,7 @@ export default function ProjectDetailPage() {
                 </CardContent>
                 {!isAuthenticated && (
                   <CardFooter>
-                    <Button
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      onClick={handleJoinProject}
-                    >
+                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={login}>
                       Login to Join
                     </Button>
                   </CardFooter>

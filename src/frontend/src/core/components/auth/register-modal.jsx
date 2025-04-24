@@ -79,7 +79,7 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
     if ("Ok" in registerResponse) {
       setStatus("success");
       setIsLoading(false);
-      document.location.replace(redirectPath);
+      document.location.reload();
     } else if ("Err" in registerResponse) {
       setStatus("error");
       setIsLoading(false);

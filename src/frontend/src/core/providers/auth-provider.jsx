@@ -68,9 +68,6 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         setIsLoading(false);
-        if (location.pathname !== "/") {
-          navigate("/");
-        }
       }
     } catch (err) {
       console.error("Auth error:", err);
@@ -110,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       const parsedUser = parseMotokoResponse(userResponse.Ok);
       setUser(parsedUser);
       setIsAuthenticated(true);
-      navigate(redirectPath);
+      window.location.reload();
     } else if ("Err" in userResponse) {
       setShowRegisterModal(true);
     }
@@ -142,8 +139,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         isLoading,
         user,
-      }}
-    >
+      }}>
       {children}
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={handleLoginSuccess} />
       <RegisterModal isOpen={showRegisterModal} onClose={() => setShowRegisterModal(false)} onSuccess={handleRegisterSuccess} />

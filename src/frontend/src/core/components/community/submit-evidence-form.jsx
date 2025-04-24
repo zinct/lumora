@@ -1,31 +1,29 @@
-
-
-import { useState } from "react"
-import { FileText, Upload, X, Plus } from "lucide-react"
-import { Button } from "@/core/components/ui/button"
-import { Input } from "@/core/components/ui/input"
-import { Label } from "@/core/components/ui/label"
-import { Textarea } from "@/core/components/ui/textarea"
-import { useToast } from "@/core/hooks/use-toast"
+import { useState } from "react";
+import { FileText, Upload, X, Plus } from "lucide-react";
+import { Button } from "@/core/components/ui/button";
+import { Input } from "@/core/components/ui/input";
+import { Label } from "@/core/components/ui/label";
+import { Textarea } from "@/core/components/ui/textarea";
+import { useToast } from "@/core/hooks/use-toast";
 
 export function SubmitEvidenceForm({ onSubmit }) {
-  const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [description, setDescription] = useState("")
-  const [files, setFiles] = useState([])
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [description, setDescription] = useState("");
+  const [files, setFiles] = useState([]);
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files)
+    const selectedFiles = Array.from(e.target.files);
 
     // Check file size (5MB limit per file)
-    const oversizedFiles = selectedFiles.filter((file) => file.size > 5 * 1024 * 1024)
+    const oversizedFiles = selectedFiles.filter((file) => file.size > 5 * 1024 * 1024);
     if (oversizedFiles.length > 0) {
       toast({
         title: "File too large",
         description: `Some files exceed the 5MB size limit: ${oversizedFiles.map((f) => f.name).join(", ")}`,
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Add files to the list
@@ -35,88 +33,72 @@ export function SubmitEvidenceForm({ onSubmit }) {
       type: file.type.startsWith("image/") ? "image" : "document",
       size: formatFileSize(file.size),
       preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-    }))
+    }));
 
-    setFiles([...files, ...newFiles])
-  }
+    setFiles([...files, ...selectedFiles]);
+  };
 
   const removeFile = (index) => {
-    const newFiles = [...files]
+    const newFiles = [...files];
     if (newFiles[index].preview) {
-      URL.revokeObjectURL(newFiles[index].preview)
+      URL.revokeObjectURL(newFiles[index].preview);
     }
-    newFiles.splice(index, 1)
-    setFiles(newFiles)
-  }
+    newFiles.splice(index, 1);
+    setFiles(newFiles);
+  };
 
   const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + " B"
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
-    else return (bytes / 1048576).toFixed(1) + " MB"
-  }
+    if (bytes < 1024) return bytes + " B";
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    else return (bytes / 1048576).toFixed(1) + " MB";
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (description.trim() === "" && files.length === 0) {
       toast({
         title: "Submission incomplete",
         description: "Please provide a description or upload files as evidence.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSubmitting(true)
-
+    setIsSubmitting(true);
+    console.log("files", files);
     try {
-      // In a real app, this would upload files to a server
-      // For demo purposes, we'll just pass the file metadata
-      const fileData = files.map((f) => ({
-        name: f.name,
-        type: f.type,
-        size: f.size,
-      }))
-
       await onSubmit({
         description,
-        files: fileData,
-      })
+        files,
+      });
 
       toast({
         title: "Evidence submitted",
         description: "Your evidence has been submitted successfully and is pending review.",
-      })
+      });
 
       // Clean up file previews
       files.forEach((file) => {
-        if (file.preview) URL.revokeObjectURL(file.preview)
-      })
+        if (file.preview) URL.revokeObjectURL(file.preview);
+      });
     } catch (error) {
       toast({
         title: "Submission failed",
         description: "There was an error submitting your evidence. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Describe your participation and the evidence you're providing..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-        />
-        <p className="text-sm text-muted-foreground">
-          Explain what you did, when you did it, and how it relates to the project requirements.
-        </p>
+        <Textarea id="description" placeholder="Describe your participation and the evidence you're providing..." value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+        <p className="text-sm text-muted-foreground">Explain what you did, when you did it, and how it relates to the project requirements.</p>
       </div>
 
       <div className="space-y-2">
@@ -128,11 +110,7 @@ export function SubmitEvidenceForm({ onSubmit }) {
               <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                 {file.preview ? (
                   <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
-                    <img
-                      src={file.preview || "/placeholder.svg"}
-                      alt={file.name}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={file.preview || "/placeholder.svg"} alt={file.name} className="h-full w-full object-cover" />
                   </div>
                 ) : (
                   <FileText className="h-10 w-10 p-2 text-muted-foreground" />
@@ -150,20 +128,11 @@ export function SubmitEvidenceForm({ onSubmit }) {
         )}
 
         <div className="border-2 border-dashed rounded-lg p-4 text-center">
-          <Input
-            id="evidence-files"
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-            accept="image/*,.pdf,.doc,.docx,.txt,.csv"
-          />
+          <Input id="evidence-files" type="file" multiple className="hidden" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt,.csv" />
           <div className="py-4">
             <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground mb-1">Drag and drop files, or click to browse</p>
-            <p className="text-xs text-muted-foreground mb-4">
-              Supports images, PDFs, documents, and text files (max 5MB each)
-            </p>
+            <p className="text-xs text-muted-foreground mb-4">Supports images, PDFs, documents, and text files (max 5MB each)</p>
             <Button type="button" variant="outline" onClick={() => document.getElementById("evidence-files").click()}>
               <Plus className="h-4 w-4 mr-2" />
               Add Files
@@ -178,5 +147,5 @@ export function SubmitEvidenceForm({ onSubmit }) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

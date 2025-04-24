@@ -77,6 +77,18 @@ actor Lumora {
 
     public type Result<T, E> = { #Ok : T; #Err : E };
 
+    public type EvidenceId = Nat32;
+
+    public type Evidence = {
+        id: EvidenceId;
+        projectId: ProjectId;
+        participantId: Principal;
+        description: Text;
+        imageUrl: [Text];
+        timestamp: Time.Time;
+        status: Text; // "Pending", "Approved", "Rejected"
+    };
+
     // Project Types
     public type ProjectId = Nat32;
     public type Project = { 
@@ -88,13 +100,14 @@ actor Lumora {
         startDate: Time.Time;
         expiredAt: Time.Time; 
         reward: Nat; 
-        image: ?Blob;
+        imageUrl: ?Text;
         communityId: Principal; 
         status: Nat; // 0: inactive, 1: active, 2: upcoming, 3: closed
         maxParticipants: Nat;
         participants: [Participant];
         address: Text;
         impact: Text;
+        evidence: [Evidence];
     };
 
     // Community Types
@@ -155,6 +168,7 @@ actor Lumora {
 
     // Project Storage
     private stable var nextProjectId : ProjectId = 0;
+    private stable var nextEvidenceId : EvidenceId = 0;
     stable var projectStorage : [(Principal, [Project])] = [];
     var projectStore = Map.HashMap<Principal, [Project]>(0, Principal.equal, Principal.hash);
 
@@ -439,7 +453,7 @@ actor Lumora {
 
         switch (communityStore.get(communityId)) {
             case null { return #Err("Community not found"); };
-            case (?community) {
+            case (?_) {
                 let now = Nat64.fromNat(Int.abs(Time.now()));
                 
                 let mintOp : Transaction = {
@@ -594,7 +608,7 @@ actor Lumora {
         startDate: Time.Time;
         expiredAt: Time.Time;
         reward: Nat;
-        image: ?Blob;
+        imageUrl: ?Text;
         category: Text;
         maxParticipants: Nat;
         address: Text;
@@ -636,7 +650,7 @@ actor Lumora {
             startDate = params.startDate;
             expiredAt = params.expiredAt;
             reward = params.reward;
-            image = params.image;
+            imageUrl = params.imageUrl;
             communityId = caller;
             status = 1;
             participants = [];
@@ -644,6 +658,7 @@ actor Lumora {
             maxParticipants = params.maxParticipants;
             address = params.address;
             impact = params.impact;
+            evidence = [];
         }; 
 
         nextProjectId += 1;
@@ -668,7 +683,7 @@ actor Lumora {
         startDate: Time.Time;
         expiredAt: Time.Time; 
         reward: Nat; 
-        image: ?Blob;
+        imageUrl: ?Text;
         status: Nat;
         maxParticipants: Nat;
         participants: [Participant];
@@ -676,8 +691,11 @@ actor Lumora {
         communityName: Text;
         address: Text;
         impact: Text;
+        isJoined: Bool;
+        evidence: [Evidence];
     };
-    public query func getProjects() : async Result<[GetProjectResult], Text> {
+
+    public shared ({ caller }) func getProjects() : async Result<[GetProjectResult], Text> {
         var allProjects : [GetProjectResult] = [];
         for ((communityId, projects) in projectStore.entries()) {
             for (project in projects.vals()) {
@@ -688,6 +706,14 @@ actor Lumora {
 
                 let currentStatus = calculateProjectStatus(project.startDate, project.expiredAt, project.status);
 
+                let isJoined = switch (participantStore.get(caller)) {
+                    case null { false };
+                    case (?_) {
+                        let isParticipant = Array.find<Participant>(project.participants, func(p) = p.id == caller);
+                        Option.isSome(isParticipant)
+                    };
+                };
+
                 let projectResult : GetProjectResult = {
                     id = project.id;
                     title = project.title;
@@ -697,7 +723,7 @@ actor Lumora {
                     startDate = project.startDate;
                     expiredAt = project.expiredAt;
                     reward = project.reward;
-                    image = project.image;
+                    imageUrl = project.imageUrl;
                     status = currentStatus;
                     maxParticipants = project.maxParticipants;
                     participants = project.participants;
@@ -705,15 +731,16 @@ actor Lumora {
                     communityName = community.name;
                     address = project.address;
                     impact = project.impact;
+                    isJoined = isJoined;
+                    evidence = project.evidence;
                 };
                 allProjects := Array.append(allProjects, [projectResult]);
             };
         };
         return #Ok(allProjects);
-    };
-   
+    };  
 
-    public func getProject(id: ProjectId) : async Result<GetProjectResult, Text> {
+    public shared ({ caller }) func getProject(id: ProjectId) : async Result<GetProjectResult, Text> {
         for ((communityId, projects) in projectStore.entries()) {
             for (project in projects.vals()) {
                 if (project.id == id) {
@@ -721,6 +748,15 @@ actor Lumora {
                         case null { return #Err("Community not found") };
                         case (?c) { c };
                     };
+
+                    let isJoined = switch (participantStore.get(caller)) {
+                        case null { false };
+                        case (?_) {
+                            let isParticipant = Array.find<Participant>(project.participants, func(p) = p.id == caller);
+                            Option.isSome(isParticipant)
+                        };
+                    };
+
                     return #Ok({
                         id = project.id;
                         title = project.title;
@@ -730,7 +766,7 @@ actor Lumora {
                         startDate = project.startDate;
                         expiredAt = project.expiredAt;
                         reward = project.reward;
-                        image = project.image;
+                        imageUrl = project.imageUrl;
                         status = project.status;
                         maxParticipants = project.maxParticipants;
                         participants = project.participants;
@@ -738,6 +774,8 @@ actor Lumora {
                         communityName = community.name;
                         address = project.address;
                         impact = project.impact;
+                        isJoined = isJoined;
+                        evidence = project.evidence;
                     });
                 };
             };
@@ -767,7 +805,7 @@ actor Lumora {
 
     public shared ({ caller }) func joinProject(projectId: ProjectId) : async Result<Text, Text> {
         if (Principal.isAnonymous(caller)) {
-            return #Err("Anonymous participants cannot join projects");
+            return #Err("Anonymous cannot join projects");
         };
 
         let participantResult = participantStore.get(caller);
@@ -789,11 +827,8 @@ actor Lumora {
                 switch (projectResult) {
                     case (#Err(msg)) { return #Err(msg) };
                     case (#Ok(project)) {
-                        if (project.status == 0) {
+                        if (project.status != 1) {
                             return #Err("Project is not active");
-                        };
-                        if (project.expiredAt < Time.now()) {
-                            return #Err("Project has expired");
                         };
                         if (project.participants.size() >= project.maxParticipants) {
                             return #Err("Project has reached maximum participants");
@@ -807,7 +842,7 @@ actor Lumora {
                             startDate = project.startDate;
                             expiredAt = project.expiredAt;
                             reward = project.reward;
-                            image = project.image;
+                            imageUrl = project.imageUrl;
                             communityId = project.communityId;
                             status = project.status;
                             participants = Array.append(project.participants, [participant]);
@@ -815,6 +850,7 @@ actor Lumora {
                             maxParticipants = project.maxParticipants;
                             address = project.address;
                             impact = project.impact;
+                            evidence = project.evidence;
                         };
 
                         projectStore.put(project.communityId, [updatedProject]);
@@ -825,13 +861,87 @@ actor Lumora {
         };
     };
 
-    public shared ({ caller }) func getParticipantProjects(participantId: Principal) : async [Project] {
+    public type SubmitEvidenceParams = {
+        projectId: ProjectId;
+        description: Text;
+        imageUrl: [Text];
+    };
+
+    public shared ({ caller }) func submitEvidence(params: SubmitEvidenceParams) : async Result<Text, Text> {
+        if (Principal.isAnonymous(caller)) {
+            return #Err("Anonymous cannot submit evidence");
+        };
+
+        // Check if participant exists
+        let participantResult = participantStore.get(caller);
+        switch (participantResult) {
+            case null { return #Err("Participant not found") };
+            case (?participant) {
+                // Find the project
+                for ((communityId, projects) in projectStore.entries()) {
+                    for (project in projects.vals()) {
+                        if (project.id == params.projectId) {
+                            // Check if project is active
+                            if (project.status != 1) {
+                                return #Err("Project is not active");
+                            };
+
+                            // Check if participant has joined the project
+                            let isParticipantJoined = Array.find<Participant>(project.participants, func(p) = p.id == caller);
+                            if (Option.isNull(isParticipantJoined)) {
+                                return #Err("You have not joined this project");
+                            };
+
+                            // Create evidence
+                            let evidence : Evidence = {
+                                id = nextEvidenceId;
+                                projectId = params.projectId;
+                                participantId = caller;
+                                description = params.description;
+                                imageUrl = params.imageUrl;
+                                timestamp = Time.now();
+                                status = "Pending";
+                            };
+
+                            nextEvidenceId += 1;
+
+                            // Update project with new evidence
+                            let updatedProject : Project = {
+                                id = project.id;
+                                title = project.title;
+                                description = project.description;
+                                createdAt = project.createdAt;
+                                startDate = project.startDate;
+                                expiredAt = project.expiredAt;
+                                reward = project.reward;
+                                imageUrl = project.imageUrl;
+                                communityId = project.communityId;
+                                status = project.status;
+                                participants = project.participants;
+                                category = project.category;
+                                maxParticipants = project.maxParticipants;
+                                address = project.address;
+                                impact = project.impact;
+                                evidence = Array.append(project.evidence, [evidence]);
+                            };
+
+                            projectStore.put(communityId, [updatedProject]);
+                            return #Ok("Evidence submitted successfully");
+                        };
+                    };
+                };
+                return #Err("Project not found");
+            };
+        };
+    };
+
+    public shared ({ caller }) func getParticipantProjects() : async [Project] {
         var participantProjects : [Project] = [];
         
         for ((communityId, projects) in projectStore.entries()) {
             for (project in projects.vals()) {
                 for (participant in project.participants.vals()) {
-                    if (participant.id == participantId) {
+                    if (participant.id == caller) {
                         participantProjects := Array.append(participantProjects, [project]);
                     };
                 };
@@ -876,7 +986,7 @@ actor Lumora {
                             return #Err("Participant has not joined this project");
                         };
 
-                        let participantProjects = await getParticipantProjects(participantId);
+                        let participantProjects = await getParticipantProjects();
                         for (participantProject in participantProjects.vals()) {
                             if (participantProject.id == projectId) {
                                 return #Err("Participant has already received reward for this project");
@@ -918,7 +1028,7 @@ actor Lumora {
                             startDate = project.startDate;
                             expiredAt = project.expiredAt;
                             reward = project.reward;
-                            image = project.image;
+                            imageUrl = project.imageUrl;
                             communityId = project.communityId;
                             status = project.status;
                             participants = project.participants;
@@ -926,6 +1036,7 @@ actor Lumora {
                             maxParticipants = project.maxParticipants;
                             address = project.address;
                             impact = project.impact;
+                            evidence = project.evidence;
                         };
 
                         log.add(transferOp);

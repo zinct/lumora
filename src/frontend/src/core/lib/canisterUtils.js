@@ -14,6 +14,22 @@ export function getInternetIdentityNetwork() {
   }
 }
 
+export function getAssetManagerNetwork() {
+  const canisterId = process.env.CANISTER_ID_ASSETS;
+  const network = process.env.DFX_NETWORK;
+
+  if (!canisterId) {
+    console.warn("CANISTER_ID_ASSET_MANAGER is not set.");
+    return null;
+  }
+
+  if (network === "local") {
+    return `http://${canisterId}.localhost:4943`;
+  } else {
+    return `https://${canisterId}.icp0.io`;
+  }
+}
+
 export function jsonStringify(data) {
   return JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v));
 }
