@@ -1,146 +1,203 @@
-
-
-import { useState } from "react"
-import { Plus, Search, Filter, ArrowUpDown, Edit, Eye, Users, Calendar, Leaf, CheckCircle } from "lucide-react"
-import { Button } from "@/core/components/ui/button"
-import { Input } from "@/core/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card"
-import { Badge } from "@/core/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/core/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select"
-import { ProjectForm } from "@/core/components/community/project-form"
+import { useState, useEffect } from "react";
+import { Plus, Search, Edit, Eye, Users, Calendar, Leaf, Ban, Clock, CalendarClock, HelpCircle } from "lucide-react";
+import { Button } from "@/core/components/ui/button";
+import { Input } from "@/core/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
+import { Badge } from "@/core/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/core/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
+import { ProjectForm } from "@/core/components/community/project-form";
+import { backend } from "declarations/backend";
+import { useAuth } from "@/core/providers/auth-provider";
+import { useToast } from "@/core/hooks/use-toast";
+import { Actor } from "@dfinity/agent";
 
 export function ProjectManagement() {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      title: "Community Garden Initiative",
-      description: "Creating urban gardens in underserved neighborhoods",
-      category: "Agriculture",
-      startDate: "2025-05-01",
-      endDate: "2025-08-31",
-      participants: 45,
-      reward: 2500,
-      status: "Active",
-      progress: 35,
-      verified: true,
-    },
-    {
-      id: 2,
-      title: "Solar Panel Collective",
-      description: "Group purchasing program for residential solar panels",
-      category: "Energy",
-      startDate: "2025-04-15",
-      endDate: "2025-07-15",
-      participants: 32,
-      reward: 5000,
-      status: "Active",
-      progress: 60,
-      verified: true,
-    },
-    {
-      id: 3,
-      title: "Rainwater Harvesting",
-      description: "Installing rainwater collection systems in community buildings",
-      category: "Water",
-      startDate: "2025-06-01",
-      endDate: "2025-09-30",
-      participants: 18,
-      reward: 1800,
-      status: "Draft",
-      progress: 0,
-      verified: false,
-    },
-    {
-      id: 4,
-      title: "Sustainable Transportation Network",
-      description: "Creating a community carpooling and bike-sharing program",
-      category: "Transportation",
-      startDate: "2025-05-15",
-      endDate: "2025-11-15",
-      participants: 56,
-      reward: 3200,
-      status: "Active",
-      progress: 25,
-      verified: true,
-    },
-    {
-      id: 5,
-      title: "Zero Waste Business Program",
-      description: "Helping local businesses reduce waste and implement sustainable practices",
-      category: "Waste",
-      startDate: "2025-07-01",
-      endDate: "2025-12-31",
-      participants: 12,
-      reward: 4500,
-      status: "Pending",
-      progress: 0,
-      verified: false,
-    },
-    {
-      id: 6,
-      title: "Community Energy Audit",
-      description: "Conducting energy audits for residential buildings to identify efficiency improvements",
-      category: "Energy",
-      startDate: "2025-06-15",
-      endDate: "2025-08-15",
-      participants: 28,
-      reward: 2000,
-      status: "Active",
-      progress: 45,
-      verified: true,
-    },
-    {
-      id: 7,
-      title: "Reforestation Project",
-      description: "Planting native trees in areas affected by deforestation",
-      category: "Forestry",
-      startDate: "2025-04-01",
-      endDate: "2025-10-31",
-      participants: 72,
-      reward: 6000,
-      status: "Completed",
-      progress: 100,
-      verified: true,
-    },
-  ])
+  const { isAuthenticated, identity } = useAuth();
+  const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [projects, setProjects] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const handleCreateProject = (newProject) => {
-    setProjects([
-      ...projects,
-      {
-        ...newProject,
-        id: projects.length + 1,
-        participants: 0,
-        progress: 0,
-        verified: false,
-      },
-    ])
-    setIsCreateDialogOpen(false)
-  }
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Active":
-        return <Badge className="bg-emerald-500">Active</Badge>
-      case "Draft":
-        return <Badge className="bg-blue-500">Draft</Badge>
-      case "Pending":
-        return <Badge className="bg-amber-500">Pending</Badge>
-      case "Completed":
-        return <Badge className="bg-purple-500">Completed</Badge>
-      default:
-        return <Badge>{status}</Badge>
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProjects();
     }
+  }, [isAuthenticated]);
+
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const response = await backend.getCommunityProjects();
+      if (response.Ok) {
+        setProjects(
+          response.Ok.map((project) => ({
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            category: project.category,
+            startDate: new Date(Number(project.startDate) / 1000000),
+            expiredAt: new Date(Number(project.expiredAt) / 1000000),
+            participants: project.participants.length,
+            reward: Number(project.reward),
+            status: Number(project.status),
+            maxParticipants: Number(project.maxParticipants),
+            address: project.address,
+            impact: project.impact,
+            evidence: project.evidence,
+          }))
+        );
+      } else {
+        toast({
+          title: "Error",
+          description: response.Err,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch projects",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleStatusChange = (value) => {
+    setStatusFilter(value);
+  };
+
+  const handleCategoryChange = (value) => {
+    setCategoryFilter(value);
+  };
+
+  const handleCreateProject = async (projectData) => {
+    try {
+      setIsLoading(true);
+
+      if (!identity) {
+        toast({
+          title: "Error",
+          description: "Please login first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert dates to nanoseconds
+      const startDate = BigInt(projectData.startDate.getTime() * 1_000_000);
+      const expiredAt = BigInt(projectData.endDate.getTime() * 1_000_000);
+
+      // Handle image upload if exists
+      let imageUrl = null;
+
+      // Call backend to create project
+      // const response = await backend.createProject(params);
+
+      // if (response.Ok) {
+      //   toast({
+      //     title: "Success",
+      //     description: "Project created successfully",
+      //   });
+      //   setIsCreateDialogOpen(false);
+      //   fetchProjects(); // Refresh project list
+      // } else {
+      //   toast({
+      //     title: "Error",
+      //     description: response.Err,
+      //     variant: "destructive",
+      //   });
+      // }
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create project",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredProjects = projects.filter((project) => {
+    // Search filter
+    const matchesSearch = searchQuery === "" || project.title.toLowerCase().includes(searchQuery.toLowerCase()) || project.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Status filter
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "0" && project.status === 0) || // inactive
+      (statusFilter === "1" && project.status === 1) || // active
+      (statusFilter === "2" && project.status === 2) || // upcoming
+      (statusFilter === "3" && project.status === 3); // closed
+
+    // Category filter
+    const matchesCategory = categoryFilter === "all" || Object.keys(project.category)[0].toLowerCase() === categoryFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  const renderProjectStatus = (status) => {
+    status = parseInt(status);
+    switch (status) {
+      case 0: // inactive
+        return (
+          <Badge variant="secondary" className="bg-red-500/20 text-red-400">
+            <Ban className="h-3 w-3 mr-1" />
+            Inactive
+          </Badge>
+        );
+      case 1: // active
+        return (
+          <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400">
+            <Leaf className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        );
+      case 2: // upcoming
+        return (
+          <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+            <CalendarClock className="h-3 w-3 mr-1" />
+            Upcoming
+          </Badge>
+        );
+      case 3: // closed
+        return (
+          <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
+            <Clock className="h-3 w-3 mr-1" />
+            Closed
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
+            <HelpCircle className="h-3 w-3 mr-1" />
+            Unknown
+          </Badge>
+        );
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-64 bg-muted rounded mb-4"></div>
+          <div className="h-4 w-48 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -149,21 +206,21 @@ export function ProjectManagement() {
         <div className="flex flex-col sm:flex-row gap-2 flex-1">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search projects..." className="pl-9" />
+            <Input placeholder="Search projects..." className="pl-9" value={searchQuery} onChange={handleSearchChange} />
           </div>
-          <Select defaultValue="all">
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="0">Inactive</SelectItem>
+              <SelectItem value="1">Active</SelectItem>
+              <SelectItem value="2">Upcoming</SelectItem>
+              <SelectItem value="3">Closed</SelectItem>
             </SelectContent>
           </Select>
-          <Select defaultValue="all">
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -175,6 +232,7 @@ export function ProjectManagement() {
               <SelectItem value="transportation">Transportation</SelectItem>
               <SelectItem value="agriculture">Agriculture</SelectItem>
               <SelectItem value="forestry">Forestry</SelectItem>
+              <SelectItem value="biodiversity">Biodiversity</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -195,303 +253,88 @@ export function ProjectManagement() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All Projects</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="draft">Draft</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle>Project Management</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filter
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    Sort
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>Manage all your sustainability projects</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="rounded-md border">
-                <div className="grid grid-cols-12 p-4 bg-muted text-sm font-medium">
-                  <div className="col-span-4">Project</div>
-                  <div className="col-span-2 text-center">Category</div>
-                  <div className="col-span-2 text-center">Timeline</div>
-                  <div className="col-span-1 text-center">Participants</div>
-                  <div className="col-span-1 text-center">Reward</div>
-                  <div className="col-span-1 text-center">Status</div>
-                  <div className="col-span-1 text-center">Actions</div>
-                </div>
-                <div className="divide-y">
-                  {projects.map((project) => (
-                    <div key={project.id} className="grid grid-cols-12 p-4 items-center">
-                      <div className="col-span-4">
-                        <div className="font-medium">{project.title}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">{project.description}</div>
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <Badge variant="outline">{project.category}</Badge>
-                      </div>
-                      <div className="col-span-2 text-center text-sm">
-                        <div className="flex items-center justify-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>
-                            {new Date(project.startDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          to {new Date(project.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </div>
-                      </div>
-                      <div className="col-span-1 text-center">
-                        <div className="flex items-center justify-center">
-                          <Users className="h-3 w-3 mr-1" />
-                          <span>{project.participants}</span>
-                        </div>
-                      </div>
-                      <div className="col-span-1 text-center">
-                        <div className="flex items-center justify-center">
-                          <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
-                          <span>{project.reward}</span>
-                        </div>
-                      </div>
-                      <div className="col-span-1 text-center">{getStatusBadge(project.status)}</div>
-                      <div className="col-span-1 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle>Project Management</CardTitle>
+          </div>
+          <CardDescription>Manage all your sustainability projects</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="rounded-md border">
+            <div className="grid grid-cols-12 p-4 bg-muted text-sm font-medium">
+              <div className="col-span-4">Project</div>
+              <div className="col-span-2 text-center">Category</div>
+              <div className="col-span-2 text-center">Timeline</div>
+              <div className="col-span-1 text-center">Participants</div>
+              <div className="col-span-1 text-center">Reward</div>
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-1 text-center">Actions</div>
+            </div>
+            <div className="divide-y">
+              {filteredProjects.map((project) => (
+                <div key={project.id} className="grid grid-cols-12 p-4 items-center">
+                  <div className="col-span-4">
+                    <div className="font-medium">{project.title}</div>
+                    <div className="text-sm text-muted-foreground truncate max-w-xs">{project.description}</div>
+                  </div>
+                  <div className="col-span-2 text-center">
+                    <Badge variant="outline">{Object.keys(project.category)}</Badge>
+                  </div>
+                  <div className="col-span-2 text-center text-sm">
+                    <div className="flex items-center justify-center">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      <span>
+                        {project.startDate.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
                     </div>
-                  ))}
+                    <div className="text-muted-foreground">to {project.expiredAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                  </div>
+                  <div className="col-span-1 text-center">
+                    <div className="flex items-center justify-center">
+                      <Users className="h-3 w-3 mr-1" />
+                      <span>
+                        {project.participants} / {project.maxParticipants}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="col-span-1 text-center">
+                    <div className="flex items-center justify-center">
+                      <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
+                      <span>{project.reward} LUM</span>
+                    </div>
+                  </div>
+                  <div className="col-span-1 text-center">{renderProjectStatus(project.status)}</div>
+                  <div className="col-span-1 text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Button variant="ghost" size="icon">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between pt-6">
-              <div className="text-sm text-muted-foreground">Showing {projects.length} projects</div>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="active" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects
-                  .filter((p) => p.status === "Active")
-                  .map((project) => (
-                    <Card key={project.id} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{project.title}</CardTitle>
-                          {getStatusBadge(project.status)}
-                        </div>
-                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-3">
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Category:</span>
-                            <span>{project.category}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Timeline:</span>
-                            <span>
-                              {new Date(project.startDate).toLocaleDateString()} -{" "}
-                              {new Date(project.endDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Participants:</span>
-                            <span>{project.participants}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Reward:</span>
-                            <span className="flex items-center">
-                              <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
-                              {project.reward} LUM
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Progress:</span>
-                              <span>{project.progress}%</span>
-                            </div>
-                            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 rounded-full"
-                                style={{ width: `${project.progress}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t pt-4 flex justify-between">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="draft" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects
-                  .filter((p) => p.status === "Draft")
-                  .map((project) => (
-                    <Card key={project.id} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{project.title}</CardTitle>
-                          {getStatusBadge(project.status)}
-                        </div>
-                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-3">
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Category:</span>
-                            <span>{project.category}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Timeline:</span>
-                            <span>
-                              {new Date(project.startDate).toLocaleDateString()} -{" "}
-                              {new Date(project.endDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Reward:</span>
-                            <span className="flex items-center">
-                              <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
-                              {project.reward} LUM
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t pt-4 flex justify-between">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700" size="sm">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Publish
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects
-                  .filter((p) => p.status === "Completed")
-                  .map((project) => (
-                    <Card key={project.id} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{project.title}</CardTitle>
-                          {getStatusBadge(project.status)}
-                        </div>
-                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-3">
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Category:</span>
-                            <span>{project.category}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Timeline:</span>
-                            <span>
-                              {new Date(project.startDate).toLocaleDateString()} -{" "}
-                              {new Date(project.endDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Participants:</span>
-                            <span>{project.participants}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Reward:</span>
-                            <span className="flex items-center">
-                              <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
-                              {project.reward} LUM
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Progress:</span>
-                              <span>{project.progress}%</span>
-                            </div>
-                            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 rounded-full"
-                                style={{ width: `${project.progress}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t pt-4 flex justify-between">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Results
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Leaf className="h-4 w-4 mr-2" />
-                          Impact Report
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between pt-6">
+          <div className="text-sm text-muted-foreground">Showing {filteredProjects.length} projects</div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" disabled>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled>
+              Next
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
-  )
+  );
 }

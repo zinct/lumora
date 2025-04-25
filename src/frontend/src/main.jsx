@@ -12,11 +12,14 @@ import ProjectDetailPage from "./pages/project/project-detail-page";
 import CommunityDashboardPage from "./pages/community-page";
 import BalancePage from "./pages/balance-page";
 import { AuthProvider } from "@/core/providers/auth-provider";
+import MyProjectsPage from "./pages/my-project-page";
+import ScrollToTop from "@/core/components/scroll-to-top";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<HomeLayout />}>
             <Route index element={<HomePage />} />
@@ -26,6 +29,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="/nfts" element={<NFTsPage />} />
             <Route path="/community" element={<CommunityDashboardPage />} />
             <Route path="/balance" element={<BalancePage />} />
+            <Route path="/my-projects" element={<MyProjectsPage />} />
           </Route>
         </Routes>
       </AuthProvider>

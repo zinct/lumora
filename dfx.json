@@ -4,13 +4,17 @@
       "main": "src/backend/main.mo",
       "type": "motoko"
     },
+    "token": {
+      "main": "src/backend/token.mo",
+      "type": "motoko"
+    },
     "frontend": {
-      "dependencies": ["backend"],
+      "dependencies": ["backend", "token"],
       "source": ["src/frontend/dist"],
       "type": "assets",
       "workspace": "frontend"
     },
-    "assets": {
+    "storage": {
       "type": "assets",
       "source": ["src/assets"],
       "build": []

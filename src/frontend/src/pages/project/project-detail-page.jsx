@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Badge } from "@/core/components/ui/badge";
-import { AssetManager } from "@dfinity/assets";
-import { canisterId as assetsCanisterId } from "declarations/assets";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 import { Avatar, AvatarImage } from "@/core/components/ui/avatar";
 import { SubmitEvidenceForm } from "@/core/components/community/submit-evidence-form";
 import { SubmissionStatus } from "@/core/components/community/submission-status";
 import { useToast } from "@/core/hooks/use-toast";
-import { ArrowLeft, Calendar, FileText, Leaf, MapPin, Share2, Users, Award, Ban, CalendarClock, Clock, HelpCircle, CircleGauge } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Leaf, MapPin, Share2, Users, Award, Ban, CalendarClock, Clock, HelpCircle, XCircle, CheckCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { backend } from "declarations/backend";
 import { useAuth } from "@/core/providers/auth-provider";
-import { Actor } from "@dfinity/agent";
-import { getAssetManagerNetwork } from "@/core/lib/canisterUtils";
+import { getStorageNetwork } from "@/core/lib/canisterUtils";
 
 export default function ProjectDetailPage() {
   const navigate = useNavigate();
@@ -28,90 +25,136 @@ export default function ProjectDetailPage() {
   const [userSubmission, setUserSubmission] = useState(null);
   const [hasJoined, setHasJoined] = useState(false);
 
-  const assetManager = new AssetManager({
-    canisterId: assetsCanisterId,
-    agent: Actor.agentOf(backend),
-  });
+  const fetchProject = async () => {
+    try {
+      setIsLoading(true);
+      const projectId = parseInt(id);
+      const response = await backend.getProject(projectId);
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setIsLoading(true);
-        const projectId = parseInt(id);
-        const response = await backend.getProject(projectId);
+      if ("Ok" in response) {
+        const projectData = response.Ok;
 
-        if ("Ok" in response) {
-          const projectData = response.Ok;
-          setProject({
-            id: projectData.id,
-            title: projectData.title,
-            description: projectData.description,
-            category: projectData.category,
-            createdAt: new Date(Number(projectData.createdAt) / 1000000),
-            expiredAt: new Date(Number(projectData.expiredAt) / 1000000),
-            reward: projectData.reward,
-            imageUrl: projectData.imageUrl,
-            communityId: projectData.communityId,
-            communityName: projectData.communityName,
-            status: projectData.status,
-            maxParticipants: projectData.maxParticipants,
-            participants: projectData.participants,
-            address: projectData.address,
-            impact: projectData.impact,
+        setProject({
+          id: projectData.id,
+          title: projectData.title,
+          description: projectData.description,
+          category: projectData.category,
+          createdAt: new Date(Number(projectData.createdAt) / 1000000),
+          startDate: new Date(Number(projectData.startDate) / 1000000),
+          expiredAt: new Date(Number(projectData.expiredAt) / 1000000),
+          reward: projectData.reward,
+          imageUrl: projectData.imageUrl,
+          communityId: projectData.communityId,
+          communityName: projectData.communityName,
+          status: projectData.status,
+          maxParticipants: projectData.maxParticipants,
+          participants: projectData.participants,
+          address: projectData.address,
+          impact: projectData.impact,
+        });
+
+        const userEvidence = projectData.evidence.find((evidence) => evidence.participantId.toString() === user.id);
+
+        if (userEvidence) {
+          setUserSubmission({
+            id: userEvidence.id,
+            status: userEvidence.status,
+            submittedAt: new Date(Number(userEvidence.timestamp) / 1000000).toISOString(),
+            evidence: userEvidence.description,
+            files: userEvidence.imageData.map((blob, index) => ({
+              name: `Evidence ${index + 1}`,
+              blob: blob,
+            })),
+            feedback: userEvidence.feedback,
           });
-
-          const userEvidence = projectData.evidence.find((evidence) => evidence.participantId.toString() === user.id);
-          console.log("projectData", userEvidence);
-
-          // console.log(object);
-
-          if (userEvidence) {
-            setUserSubmission({
-              id: userEvidence.id,
-              status: userEvidence.status,
-              submittedAt: new Date(Number(userEvidence.timestamp) / 1000000).toISOString(),
-              evidence: userEvidence.description,
-              files: userEvidence.imageUrl.map((url, index) => ({
-                name: `Evidence ${index + 1}`,
-                url: url,
-              })),
-              feedback: userEvidence.feedback,
-            });
-          }
-
-          // Check if user has joined the project
-          if (isAuthenticated && user) {
-            const hasJoinedProject = projectData.participants.some((participant) => participant.id.toString() === user.id);
-            setHasJoined(hasJoinedProject);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: response.Err,
-            variant: "destructive",
-          });
-          navigate("/projects");
         }
-      } catch (error) {
-        console.error("Error fetching project:", error);
+
+        // Check if user has joined the project
+        if (isAuthenticated && user) {
+          const hasJoinedProject = projectData.participants.some((participant) => participant.id.toString() === user.id);
+          setHasJoined(hasJoinedProject);
+        }
+      } else {
         toast({
           title: "Error",
-          description: "Failed to fetch project details",
+          description: response.Err,
           variant: "destructive",
         });
         navigate("/projects");
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch project details",
+        variant: "destructive",
+      });
+      navigate("/projects");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProject();
   }, [id, isAuthenticated, user, navigate, toast]);
 
-  // Update handleSubmitEvidence to refresh project data after submission
-  const handleSubmitEvidence = async (data) => {
-    // console.log(identity.getPrincipal().toText());
+  const getStatusConfig = (status) => {
+    status = parseInt(status);
+    switch (status) {
+      case 3: // closed
+        return {
+          badgeColor: "bg-red-500",
+          badgeTextColor: "text-white",
+          icon: <XCircle className="h-3 w-3 mr-1" />,
+          message: "This project is closed and no longer accepting participants.",
+          canJoin: false,
+          canSubmitEvidence: false,
+          evidenceMessage: "This project is closed. Evidence submission is no longer available.",
+          cardBorderColor: "border-red-500/50",
+          cardBgColor: "bg-red-500/5",
+        };
+      case 2: // upcoming
+        return {
+          badgeColor: "bg-blue-500",
+          badgeTextColor: "text-white",
+          icon: <Clock className="h-3 w-3 mr-1" />,
+          message: "This project hasn't started yet. You can join now to be ready when it begins.",
+          canJoin: true,
+          canSubmitEvidence: false,
+          evidenceMessage: "Evidence submission will be enabled once the project starts on " + new Date(project.startDate).toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) + ".",
+          cardBorderColor: "border-blue-500/50",
+          cardBgColor: "bg-blue-500/5",
+        };
+      case 1: // active
+        return {
+          badgeColor: "bg-emerald-500",
+          badgeTextColor: "text-white",
+          icon: <CheckCircle className="h-3 w-3 mr-1" />,
+          message: "This project is active and accepting participants.",
+          canJoin: true,
+          canSubmitEvidence: true,
+          evidenceMessage: "",
+          cardBorderColor: "border-emerald-500/50",
+          cardBgColor: "bg-emerald-500/5",
+        };
+      case 0: // inactive
+      default:
+        return {
+          badgeColor: "bg-gray-500",
+          badgeTextColor: "text-white",
+          icon: <Ban className="h-3 w-3 mr-1" />,
+          message: "This project is inactive.",
+          canJoin: false,
+          canSubmitEvidence: false,
+          evidenceMessage: "This project is inactive. Evidence submission is not available.",
+          cardBorderColor: "border-gray-500/50",
+          cardBgColor: "bg-gray-500/5",
+        };
+    }
+  };
 
+  const handleSubmitEvidence = async (data) => {
     try {
       setIsSubmittingEvidence(true);
 
@@ -124,24 +167,15 @@ export default function ProjectDetailPage() {
         return;
       }
 
-      const batch = assetManager.batch();
-      const uploadedImageUrls = [];
+      const imageBlobs = [];
 
       // Process each file
       for (const file of data.files) {
         try {
-          console.log("Processing file:", file);
-
-          const fileName = crypto.randomUUID();
-          console.log("file", fileName);
-
-          const key = await batch.store(file, {
-            path: "/evidence",
-            fileName,
-            contentType: file.type,
-          });
-
-          uploadedImageUrls.push(key);
+          // Convert File to Uint8Array
+          const arrayBuffer = await file.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          imageBlobs.push(uint8Array);
         } catch (fileError) {
           console.error("Error processing file:", fileError);
           toast({
@@ -153,7 +187,7 @@ export default function ProjectDetailPage() {
         }
       }
 
-      if (uploadedImageUrls.length === 0) {
+      if (imageBlobs.length === 0) {
         toast({
           title: "Error",
           description: "No valid files were processed",
@@ -162,22 +196,16 @@ export default function ProjectDetailPage() {
         return;
       }
 
-      // Commit the batch upload
-      await batch.commit();
-
       // Submit evidence to backend
       const response = await backend.submitEvidence({
         projectId: parseInt(id),
         description: data.description,
-        imageUrl: uploadedImageUrls,
+        imageData: imageBlobs,
       });
 
       if ("Ok" in response) {
         // Refresh project data to get updated evidence
-        const updatedProject = await backend.getProject(parseInt(id));
-        if ("Ok" in updatedProject) {
-          setProject(updatedProject.Ok);
-        }
+        fetchProject();
 
         toast({
           title: "Success",
@@ -192,19 +220,11 @@ export default function ProjectDetailPage() {
       }
     } catch (error) {
       console.error("Error submitting evidence:", error);
-      if (error.message.includes("Caller does not have Prepare permission")) {
-        toast({
-          title: "Error",
-          description: "You are not authorized to upload files. Please contact the administrator.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to submit evidence",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit evidence",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingEvidence(false);
     }
@@ -221,8 +241,6 @@ export default function ProjectDetailPage() {
       const projectId = parseInt(id);
       const response = await backend.joinProject(projectId);
       setIsJoining(false);
-
-      console.log("response", response);
 
       if ("Ok" in response) {
         setHasJoined(true);
@@ -339,7 +357,7 @@ export default function ProjectDetailPage() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="bg-black text-white border-black/20">
-                    {project.category}
+                    {Object.keys(project.category)}
                   </Badge>
                   {renderProjectStatus(project.status)}
                 </div>
@@ -386,10 +404,20 @@ export default function ProjectDetailPage() {
             {/* Main Content */}
             <div className="flex-1">
               <div className="mb-6">
-                <a href="/projects" className="text-sm text-muted-foreground hover:underline flex items-center">
+                <a href="#" onClick={() => navigate("/projects")} className="text-sm text-muted-foreground hover:underline flex items-center">
                   <ArrowLeft className="h-3 w-3 mr-1" />
                   Back to Projects
                 </a>
+              </div>
+
+              <div className={`p-4 mb-6 rounded-lg border ${getStatusConfig(project.status).cardBorderColor} ${getStatusConfig(project.status).cardBgColor}`}>
+                <div className="flex items-center gap-3">
+                  {getStatusConfig(project.status).icon}
+                  <div>
+                    <h3 className="font-medium">Project Status: {parseInt(project.status) === 0 ? "Inactive" : parseInt(project.status) === 1 ? "Active" : parseInt(project.status) === 2 ? "Upcoming" : "Closed"}</h3>
+                    <p className="text-sm text-muted-foreground">{getStatusConfig(project.status).message}</p>
+                  </div>
+                </div>
               </div>
 
               <Tabs defaultValue="overview" className="space-y-6">
@@ -465,15 +493,24 @@ export default function ProjectDetailPage() {
                                     <h4 className="text-sm font-medium mb-2">Attached Files</h4>
                                     <div className="space-y-2">
                                       {userSubmission.files.map((file, index) => {
-                                        console.log(file);
+                                        const blobUrl = URL.createObjectURL(new Blob([file.blob]));
+                                        const handleDownload = () => {
+                                          const link = document.createElement("a");
+                                          link.href = blobUrl;
+                                          link.download = `evidence_${index + 1}.jpg`;
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                          URL.revokeObjectURL(blobUrl);
+                                        };
                                         return (
                                           <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                                             <FileText className="h-4 w-4 text-muted-foreground" />
                                             <div className="flex-1">
                                               <div className="text-sm font-medium">{file.name}</div>
                                             </div>
-                                            <Button variant="ghost" size="sm" onClick={() => window.open(getAssetManagerNetwork() + file.url, "_blank")}>
-                                              View
+                                            <Button variant="ghost" size="sm" onClick={handleDownload}>
+                                              Download
                                             </Button>
                                           </div>
                                         );
@@ -499,8 +536,18 @@ export default function ProjectDetailPage() {
                               </div>
                             )}
                           </div>
-                        ) : (
+                        ) : getStatusConfig(project.status).canSubmitEvidence ? (
                           <SubmitEvidenceForm onSubmit={handleSubmitEvidence} />
+                        ) : (
+                          <div className={`p-4 rounded-lg border ${getStatusConfig(project.status).cardBorderColor} ${getStatusConfig(project.status).cardBgColor}`}>
+                            <div className="flex items-center gap-3">
+                              <Clock className="h-5 w-5 text-amber-500" />
+                              <div>
+                                <h3 className="font-medium">Evidence Submission Not Available</h3>
+                                <p className="text-sm text-muted-foreground">{getStatusConfig(project.status).evidenceMessage}</p>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </CardContent>
                     </Card>
@@ -512,48 +559,57 @@ export default function ProjectDetailPage() {
             {/* Sidebar */}
             <div className="lg:w-80 space-y-6">
               {isAuthenticated && !hasJoined && (
-                <Card className="border-emerald-500/50 bg-emerald-500/5">
+                <Card className={parseInt(project.status) === 3 ? "border-gray-500/50 bg-gray-500/5" : "border-emerald-500/50 bg-emerald-500/5"}>
                   <CardHeader>
-                    <CardTitle className="text-emerald-500">Join This Project</CardTitle>
-                    <CardDescription>Participate and earn rewards</CardDescription>
+                    <CardTitle className={parseInt(project.status) === 3 ? "text-gray-500" : "text-emerald-500"}>Join This Project</CardTitle>
+                    <CardDescription>{parseInt(project.status) === 3 ? "Project is closed" : "Participate and earn rewards"}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm mb-4">Join this project to participate in activities, submit evidence, and earn LUM tokens as rewards.</p>
                     <div className="flex items-center gap-2 text-sm mb-2">
-                      <Award className="h-4 w-4 text-amber-500" />
+                      <Award className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-amber-500"}`} />
                       <span>Earn up to {project.reward} LUM tokens</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-blue-500" />
+                      <Users className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-blue-500"}`} />
                       <span>
                         {project.participants.length} / {project.maxParticipants || "∞"} participants
                       </span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleJoinProject} disabled={isJoining}>
-                      {isJoining ? "Joining..." : "Join Project"}
+                    <Button className={`w-full ${parseInt(project.status) === 3 ? "bg-gray-600 hover:bg-gray-700" : "bg-emerald-600 hover:bg-emerald-700"}`} onClick={handleJoinProject} disabled={isJoining || parseInt(project.status) === 3}>
+                      {isJoining ? "Joining..." : parseInt(project.status) === 3 ? "Project Closed" : "Join Project"}
                     </Button>
                   </CardFooter>
                 </Card>
               )}
 
               {isAuthenticated && hasJoined && !userSubmission && (
-                <Card className="border-blue-500/50 bg-blue-500/5">
+                <Card className={parseInt(project.status) !== 1 ? "border-gray-500/50 bg-gray-500/5" : "border-blue-500/50 bg-blue-500/5"}>
                   <CardHeader>
-                    <CardTitle className="text-blue-500">Submit Your Evidence</CardTitle>
+                    <CardTitle className={parseInt(project.status) !== 1 ? "text-gray-500" : "text-blue-500"}>Submit Your Evidence</CardTitle>
                     <CardDescription>Complete project requirements</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-4">You've joined this project! Complete the requirements and submit evidence of your participation to earn rewards.</p>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Award className="h-4 w-4 text-amber-500" />
-                      <span>Earn {project.individualReward} LUM tokens upon approval</span>
-                    </div>
+                    {parseInt(project.status) !== 1 ? (
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm text-gray-500">Project hasn't started yet. Please wait until the start date.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm mb-4">You've joined this project! Complete the requirements and submit evidence of your participation to earn rewards.</p>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Award className="h-4 w-4 text-amber-500" />
+                          <span>Earn {project.individualReward} LUM tokens upon approval</span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => document.querySelector('[data-value="submit"]').click()}>
-                      {isSubmittingEvidence ? "Submitting..." : "Submit Evidence"}
+                    <Button className={`w-full ${parseInt(project.status) !== 1 ? "bg-gray-600 hover:bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}`} disabled={parseInt(project.status) !== 1}>
+                      {isSubmittingEvidence ? "Submitting..." : parseInt(project.status) !== 1 ? "Not Started Yet" : "Submit Evidence"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -579,7 +635,7 @@ export default function ProjectDetailPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>
-                        {project.createdAt.toLocaleDateString()} - {project.expiredAt.toLocaleDateString()}
+                        {project.startDate.toLocaleDateString()} - {project.expiredAt.toLocaleDateString()}
                       </span>
                     </div>
                   </div>

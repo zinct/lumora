@@ -1,18 +1,25 @@
 import { useState } from "react";
-import { ChevronDown, User, LogOut, CreditCard } from "lucide-react";
+import { ChevronDown, User, LogOut, CreditCard, FileText } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/core/components/ui/dropdown-menu";
 import { cn } from "@/core/lib/utils";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/core/providers/auth-provider";
+
 export function UserProfileHeader() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, logout, user } = useAuth();
-  //   if (!isLoggedIn) return null;
 
   const handleLogout = async () => {
     await logout();
   };
+
+  if (!isAuthenticated) return null;
+
+  if (!user?.id) {
+    logout();
+    return null;
+  }
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -51,6 +58,10 @@ export function UserProfileHeader() {
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/nfts")}>
               <CreditCard className="mr-2 h-4 w-4" />
               <span>NFTs</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/my-projects")}>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>My Projects</span>
             </DropdownMenuItem>
           </>
         )}

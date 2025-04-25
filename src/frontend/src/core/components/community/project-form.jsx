@@ -1,19 +1,40 @@
+import { useState, useRef, useCallback } from "react";
+import { Info, X, Crop } from "lucide-react";
+import { Button } from "@/core/components/ui/button";
+import { Input } from "@/core/components/ui/input";
+import { Label } from "@/core/components/ui/label";
+import { Textarea } from "@/core/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/core/components/ui/tooltip";
+import { useToast } from "@/core/hooks/use-toast";
+import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/core/components/ui/dialog";
 
-
-import { useState } from "react"
-import { CalendarIcon, Info } from "lucide-react"
-import { Button } from "@/core/components/ui/button"
-import { Input } from "@/core/components/ui/input"
-import { Label } from "@/core/components/ui/label"
-import { Textarea } from "@/core/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select"
-import { Calendar } from "@/core/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover"
-import { format } from "date-fns"
-import { cn } from "@/core/lib/utils"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/core/components/ui/tooltip"
+function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight
+    ),
+    mediaWidth,
+    mediaHeight
+  );
+}
 
 export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
+  const { toast } = useToast();
+  const fileInputRef = useRef(null);
+  const imgRef = useRef(null);
+  const [crop, setCrop] = useState();
+  const [completedCrop, setCompletedCrop] = useState();
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalImage, setOriginalImage] = useState(null);
   const [formData, setFormData] = useState({
     title: initialData.title || "",
     description: initialData.description || "",
@@ -22,18 +43,143 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
     endDate: initialData.endDate ? new Date(initialData.endDate) : null,
     reward: initialData.reward || 0,
     maxParticipants: initialData.maxParticipants || 0,
-    status: initialData.status || "Draft",
+    impact: initialData.impact || "",
+    image: null,
     ...initialData,
-  })
+  });
+
+  const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState(initialData.imageUrl || null);
+
+  const onImageLoad = useCallback((e) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 16 / 9));
+  }, []);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload only JPG, JPEG, or PNG files",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (3MB)
+    if (file.size > 3 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 3MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setOriginalImage(reader.result);
+      setIsEditing(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (crop) => {
+    setCompletedCrop(crop);
+  };
+
+  const handleEditComplete = () => {
+    if (!completedCrop || !imgRef.current) return;
+
+    const image = imgRef.current;
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return;
+
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+
+    ctx.drawImage(image, completedCrop.x * scaleX, completedCrop.y * scaleY, completedCrop.width * scaleX, completedCrop.height * scaleY, 0, 0, completedCrop.width, completedCrop.height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "cropped-image.jpg", { type: "image/jpeg" });
+        setFormData((prev) => ({ ...prev, image: file }));
+        setImagePreview(URL.createObjectURL(blob));
+        setIsEditing(false);
+      },
+      "image/jpeg",
+      0.95
+    );
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setOriginalImage(null);
+    setFormData((prev) => ({ ...prev, image: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when field is modified
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
 
   const handleSubmit = (e) => {
-    e.preventDefault()
-    onSubmit(formData)
-  }
+    e.preventDefault();
+
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    onSubmit(formData);
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Required fields validation
+    if (!formData.title.trim()) newErrors.title = "Title is required";
+    if (!formData.description.trim()) newErrors.description = "Description is required";
+    if (!formData.category) newErrors.category = "Category is required";
+    if (!formData.startDate) newErrors.startDate = "Start date is required";
+    if (!formData.endDate) newErrors.endDate = "End date is required";
+    if (!formData.reward) newErrors.reward = "Reward is required";
+    if (!formData.impact.trim()) newErrors.impact = "Impact is required";
+    if (!formData.maxParticipants) newErrors.maxParticipants = "Max participants is required";
+
+    // Date validation
+    if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
+      newErrors.endDate = "End date must be after start date";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -41,146 +187,84 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
             <Label htmlFor="title">Project Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="Enter project title"
-              required
-            />
+            <Input id="title" value={formData.title} onChange={(e) => handleChange("title", e.target.value)} placeholder="Enter project title" className={errors.title ? "border-red-500" : ""} />
+            {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              placeholder="Describe the project and its goals"
-              rows={4}
-              required
-            />
+            <Textarea id="description" value={formData.description} onChange={(e) => handleChange("description", e.target.value)} placeholder="Describe the project and its goals" rows={4} className={errors.description ? "border-red-500" : ""} />
+            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="impact">Project Impact</Label>
+            <Input id="impact" value={formData.impact} onChange={(e) => handleChange("impact", e.target.value)} placeholder="Enter the expected impact of this project" className={errors.impact ? "border-red-500" : ""} />
+            {errors.impact && <p className="text-sm text-red-500">{errors.impact}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="image">Project Image (Optional)</Label>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Input id="image" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="cursor-pointer" ref={fileInputRef} />
+                {imagePreview && (
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsEditing(true)} className="h-10 w-10">
+                      <Crop className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" onClick={handleRemoveImage} className="h-10 w-10">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Max file size: 3MB. Supported formats: JPG, JPEG, PNG</p>
+              {imagePreview && (
+                <div className="relative w-full max-w-xs aspect-video rounded-md overflow-hidden border">
+                  <img src={imagePreview} alt="Project preview" className="object-cover w-full h-full" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => handleChange("category", value)} required>
-              <SelectTrigger>
+            <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
+              <SelectTrigger className={errors.category ? "border-red-500" : ""}>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Energy">Energy</SelectItem>
-                <SelectItem value="Water">Water</SelectItem>
-                <SelectItem value="Waste">Waste</SelectItem>
-                <SelectItem value="Transportation">Transportation</SelectItem>
-                <SelectItem value="Agriculture">Agriculture</SelectItem>
-                <SelectItem value="Forestry">Forestry</SelectItem>
-                <SelectItem value="Education">Education</SelectItem>
-                <SelectItem value="Community">Community</SelectItem>
+                <SelectItem value="energy">Energy</SelectItem>
+                <SelectItem value="water">Water</SelectItem>
+                <SelectItem value="waste">Waste</SelectItem>
+                <SelectItem value="transportation">Transportation</SelectItem>
+                <SelectItem value="agriculture">Agriculture</SelectItem>
+                <SelectItem value="forestry">Forestry</SelectItem>
+                <SelectItem value="biodiversity">Biodiversity</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => handleChange("status", value)} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Draft">Draft</SelectItem>
-                <SelectItem value="Pending">Pending Approval</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-              </SelectContent>
-            </Select>
+            {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Start Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.startDate && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.startDate ? format(formData.startDate, "PPP") : "Select date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.startDate}
-                  onSelect={(date) => handleChange("startDate", date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="startDate">Start Date</Label>
+            <Input id="startDate" type="date" value={formData.startDate ? formData.startDate.toISOString().split("T")[0] : ""} onChange={(e) => handleChange("startDate", e.target.value ? new Date(e.target.value) : null)} min={new Date().toISOString().split("T")[0]} className={errors.startDate ? "border-red-500" : ""} />
+            {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label>End Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.endDate && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.endDate ? format(formData.endDate, "PPP") : "Select date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.endDate}
-                  onSelect={(date) => handleChange("endDate", date)}
-                  initialFocus
-                  disabled={(date) => (formData.startDate && date < formData.startDate) || date < new Date()}
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="endDate">End Date</Label>
+            <Input id="endDate" type="date" value={formData.endDate ? formData.endDate.toISOString().split("T")[0] : ""} onChange={(e) => handleChange("endDate", e.target.value ? new Date(e.target.value) : null)} min={formData.startDate ? formData.startDate.toISOString().split("T")[0] : new Date().toISOString().split("T")[0]} className={errors.endDate ? "border-red-500" : ""} />
+            {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <Label htmlFor="reward" className="mr-2">
-                Reward (LUM)
-              </Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Total LUM tokens allocated as rewards for this project</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Input
-              id="reward"
-              type="number"
-              min="0"
-              value={formData.reward}
-              onChange={(e) => handleChange("reward", Number.parseInt(e.target.value) || 0)}
-              placeholder="Enter reward amount"
-              required
-            />
-          </div>
-
           <div className="space-y-2">
             <div className="flex items-center">
               <Label htmlFor="maxParticipants" className="mr-2">
@@ -197,17 +281,56 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Input
-              id="maxParticipants"
-              type="number"
-              min="0"
-              value={formData.maxParticipants}
-              onChange={(e) => handleChange("maxParticipants", Number.parseInt(e.target.value) || 0)}
-              placeholder="Enter max participants (0 for unlimited)"
-            />
+            <Input id="maxParticipants" type="number" min="0" value={formData.maxParticipants} onChange={(e) => handleChange("maxParticipants", Number.parseInt(e.target.value))} placeholder="Enter max participants (0 for unlimited)" className={errors.maxParticipants ? "border-red-500" : ""} />
+            {errors.maxParticipants && <p className="text-sm text-red-500">{errors.maxParticipants}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <Label htmlFor="reward" className="mr-2">
+                Reward (LUM)
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total LUM tokens allocated as rewards for this project</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Input id="reward" type="number" min="0" value={formData.reward} onChange={(e) => handleChange("reward", Number.parseInt(e.target.value))} placeholder="Enter reward amount" className={errors.reward ? "border-red-500" : ""} />
+            {errors.reward && <p className="text-sm text-red-500">{errors.reward}</p>}
           </div>
         </div>
       </div>
+
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Image</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {originalImage && (
+              <div className="relative aspect-video">
+                <ReactCrop crop={crop} onChange={(c) => setCrop(c)} onComplete={handleCropComplete} aspect={16 / 9} className="max-h-[60vh]">
+                  <img ref={imgRef} src={originalImage} alt="Original" onLoad={onImageLoad} className="max-h-[60vh]" />
+                </ReactCrop>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleEditComplete} className="bg-emerald-600 hover:bg-emerald-700">
+                Apply Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
@@ -218,5 +341,5 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

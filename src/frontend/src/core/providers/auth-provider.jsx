@@ -10,8 +10,6 @@ import RegisterModal from "@/core/components/auth/register-modal";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [authClient, setAuthClient] = useState(null);
   const [user, setUser] = useState(null);
   const [identity, setIdentity] = useState(null);

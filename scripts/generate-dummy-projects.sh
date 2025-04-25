@@ -22,9 +22,13 @@ ONE_MONTH=$(( 30 * 24 * 60 * 60 * NANO_MULTIPLIER ))
 
 # Sample project categories
 CATEGORIES=(
-    "Research" "Innovation" "Education" "Community" "Technology" "Sustainability" "Social Impact"
-    "Environment" "Healthcare" "Agriculture" "Energy" "Transportation" "Waste Management" "Water"
-    "Climate" "Conservation" "Biodiversity" "Urban Planning" "Rural Development" "Food Security"
+    "energy"
+    "water"
+    "waste"
+    "transportation"
+    "agriculture"
+    "forestry"
+    "biodiversity"
 )
 
 # Sample impacts
@@ -173,7 +177,7 @@ for i in {0..29}; do
         expiredAt = ${END_DATE}; 
         reward = ${RANDOM_REWARD}; 
         imageUrl = null; 
-        category = \"${CATEGORIES[$(($i % 20))]}\"; 
+        category = variant { ${CATEGORIES[$(($i % 7))]} }; 
         maxParticipants = ${RANDOM_MAX_PARTICIPANTS};
         impact = \"${IMPACTS[$IMPACT_INDEX]}\";
         address = \"${ADDRESSES[$ADDRESS_INDEX]}\"

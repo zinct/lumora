@@ -72,8 +72,9 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
 
     Actor.agentOf(backend).replaceIdentity(identity);
     const registerResponse = await backend.register({
-      name: formData.participantName,
+      name: role === "participant" ? formData.participantName : formData.communityName,
       registerAs: role,
+      initialToken: role === "community" ? [Number(formData.initialToken)] : [],
     });
 
     if ("Ok" in registerResponse) {

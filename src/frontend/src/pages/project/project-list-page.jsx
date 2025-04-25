@@ -31,6 +31,8 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredProjects, setFilteredProjects] = useState([]);
 
+  console.log(projects);
+
   // Fetch projects from backend
   useEffect(() => {
     const fetchProjects = async () => {
@@ -56,11 +58,7 @@ export default function ProjectsPage() {
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce((query) => {
-      const filtered = projects.filter(
-        (project) =>
-          project.title.toLowerCase().includes(query.toLowerCase()) ||
-          project.description.toLowerCase().includes(query.toLowerCase())
-      );
+      const filtered = projects.filter((project) => project.title.toLowerCase().includes(query.toLowerCase()) || project.description.toLowerCase().includes(query.toLowerCase()));
       setFilteredProjects(filtered);
     }, 500),
     [projects]
@@ -80,19 +78,11 @@ export default function ProjectsPage() {
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Featured Impact Projects
-              </h1>
-              <p className="text-muted-foreground">
-                Discover and support sustainable initiatives from around the
-                world
-              </p>
+              <h1 className="text-3xl font-bold mb-2">Featured Impact Projects</h1>
+              <p className="text-muted-foreground">Discover and support sustainable initiatives from around the world</p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => navigate("/community?tab=community")}
-              >
+              <Button variant="outline" onClick={() => navigate("/community?tab=community")}>
                 Start a Project
               </Button>
             </div>
@@ -108,12 +98,7 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  className="pl-9 pr-4"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                />
+                <Input placeholder="Search projects..." className="pl-9 pr-4" value={searchQuery} onChange={handleSearchChange} />
               </div>
             </div>
           </div>
@@ -123,27 +108,13 @@ export default function ProjectsPage() {
             {loading ? (
               <div className="text-center py-8">Loading projects...</div>
             ) : error ? (
-              <div className="text-center py-8 text-red-500">
-                Error: {error}
-              </div>
+              <div className="text-center py-8 text-red-500">Error: {error}</div>
             ) : filteredProjects.length === 0 ? (
-              <EmptyState
-                variant="projects"
-                title="No projects found"
-                description={
-                  searchQuery
-                    ? "No projects match your search criteria."
-                    : "No projects to display at the moment."
-                }
-              />
+              <EmptyState variant="projects" title="No projects found" description={searchQuery ? "No projects match your search criteria." : "No projects to display at the moment."} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {filteredProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                  />
+                  <ProjectCard key={project.id} project={project} onClick={() => navigate(`/projects/${project.id}`)} />
                 ))}
               </div>
             )}

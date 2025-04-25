@@ -14,12 +14,12 @@ export function getInternetIdentityNetwork() {
   }
 }
 
-export function getAssetManagerNetwork() {
-  const canisterId = process.env.CANISTER_ID_ASSETS;
+export function getStorageNetwork() {
+  const canisterId = process.env.CANISTER_ID_STORAGE;
   const network = process.env.DFX_NETWORK;
 
   if (!canisterId) {
-    console.warn("CANISTER_ID_ASSET_MANAGER is not set.");
+    console.warn("CANISTER_ID_STORAGE is not set.");
     return null;
   }
 
