@@ -44,6 +44,7 @@ export default function ProjectDetailPage() {
           expiredAt: new Date(Number(projectData.expiredAt) / 1000000),
           reward: projectData.reward,
           imageUrl: projectData.imageUrl,
+          imageData: projectData.imageData,
           communityId: projectData.communityId,
           communityName: projectData.communityName,
           status: projectData.status,
@@ -340,14 +341,13 @@ export default function ProjectDetailPage() {
       {/* Hero Banner */}
       <section className="relative h-64 md:h-80 lg:h-96 overflow-hidden border-b border-border/40">
         <img
-          src={project.imageUrl ? project.imageUrl : `https://api.dicebear.com/7.x/shapes/svg?seed=${project.title}&backgroundColor=c7d2fe,ddd6fe,fae8ff,dbeafe,bfdbfe,e0e7ff&shape1Color=4f46e5,6d28d9,7c3aed,2563eb,3b82f6,4f46e5`}
+          src={project.imageData && project.imageData[0] ? URL.createObjectURL(new Blob([new Uint8Array(project.imageData[0])])) : `https://api.dicebear.com/7.x/shapes/svg?seed=${project.title}&backgroundColor=c7d2fe,ddd6fe,fae8ff,dbeafe,bfdbfe,e0e7ff&shape1Color=4f46e5,6d28d9,7c3aed,2563eb,3b82f6,4f46e5`}
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${project.title}&backgroundColor=c7d2fe,ddd6fe,fae8ff,dbeafe,bfdbfe,e0e7ff&shape1Color=4f46e5,6d28d9,7c3aed,2563eb,3b82f6,4f46e5`;
           }}
           alt={project.title}
-          fill
-          className="object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
@@ -561,25 +561,31 @@ export default function ProjectDetailPage() {
               {isAuthenticated && !hasJoined && (
                 <Card className={parseInt(project.status) === 3 ? "border-gray-500/50 bg-gray-500/5" : "border-emerald-500/50 bg-emerald-500/5"}>
                   <CardHeader>
-                    <CardTitle className={parseInt(project.status) === 3 ? "text-gray-500" : "text-emerald-500"}>Join This Project</CardTitle>
-                    <CardDescription>{parseInt(project.status) === 3 ? "Project is closed" : "Participate and earn rewards"}</CardDescription>
+                    <CardTitle className={parseInt(project.status) === 3 ? "text-gray-500" : "text-emerald-500"}>{user.role === "community" ? "Community Access" : "Join This Project"}</CardTitle>
+                    <CardDescription>{user.role === "community" ? "Communities cannot join projects" : parseInt(project.status) === 3 ? "Project is closed" : "Participate and earn rewards"}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-4">Join this project to participate in activities, submit evidence, and earn LUM tokens as rewards.</p>
-                    <div className="flex items-center gap-2 text-sm mb-2">
-                      <Award className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-amber-500"}`} />
-                      <span>Earn up to {project.reward} LUM tokens</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-blue-500"}`} />
-                      <span>
-                        {project.participants.length} / {project.maxParticipants || "∞"} participants
-                      </span>
-                    </div>
+                    {user.role === "community" ? (
+                      <p className="text-sm mb-4">As a community, you can create and manage projects, but cannot participate in them.</p>
+                    ) : (
+                      <>
+                        <p className="text-sm mb-4">Join this project to participate in activities, submit evidence, and earn LUM tokens as rewards.</p>
+                        <div className="flex items-center gap-2 text-sm mb-2">
+                          <Award className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-amber-500"}`} />
+                          <span>Earn up to {project.reward} LUM tokens</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className={`h-4 w-4 ${parseInt(project.status) === 3 ? "text-gray-500" : "text-blue-500"}`} />
+                          <span>
+                            {project.participants.length} / {project.maxParticipants || "∞"} participants
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                   <CardFooter>
-                    <Button className={`w-full ${parseInt(project.status) === 3 ? "bg-gray-600 hover:bg-gray-700" : "bg-emerald-600 hover:bg-emerald-700"}`} onClick={handleJoinProject} disabled={isJoining || parseInt(project.status) === 3}>
-                      {isJoining ? "Joining..." : parseInt(project.status) === 3 ? "Project Closed" : "Join Project"}
+                    <Button className={`w-full ${parseInt(project.status) === 3 ? "bg-gray-600 hover:bg-gray-700" : "bg-emerald-600 hover:bg-emerald-700"}`} onClick={handleJoinProject} disabled={isJoining || parseInt(project.status) === 3 || user.role === "community"}>
+                      {user.role === "community" ? "Communities Cannot Join" : isJoining ? "Joining..." : parseInt(project.status) === 3 ? "Project Closed" : "Join Project"}
                     </Button>
                   </CardFooter>
                 </Card>

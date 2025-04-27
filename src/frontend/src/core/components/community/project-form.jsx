@@ -27,7 +27,7 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   );
 }
 
-export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
+export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting }) {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
   const imgRef = useRef(null);
@@ -44,6 +44,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
     reward: initialData.reward || 0,
     maxParticipants: initialData.maxParticipants || 0,
     impact: initialData.impact || "",
+    address: initialData.address || "",
     image: null,
     ...initialData,
   });
@@ -171,6 +172,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
     if (!formData.reward) newErrors.reward = "Reward is required";
     if (!formData.impact.trim()) newErrors.impact = "Impact is required";
     if (!formData.maxParticipants) newErrors.maxParticipants = "Max participants is required";
+    if (!formData.address.trim()) newErrors.address = "Address is required";
 
     // Date validation
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
@@ -201,6 +203,12 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
             <Label htmlFor="impact">Project Impact</Label>
             <Input id="impact" value={formData.impact} onChange={(e) => handleChange("impact", e.target.value)} placeholder="Enter the expected impact of this project" className={errors.impact ? "border-red-500" : ""} />
             {errors.impact && <p className="text-sm text-red-500">{errors.impact}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Project Address</Label>
+            <Input id="address" value={formData.address} onChange={(e) => handleChange("address", e.target.value)} placeholder="Enter project location address" className={errors.address ? "border-red-500" : ""} />
+            {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
           </div>
 
           <div className="space-y-2">
@@ -336,8 +344,8 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {} }) {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-          Save Project
+        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Project"}
         </Button>
       </div>
     </form>

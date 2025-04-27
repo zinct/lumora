@@ -31,8 +31,6 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredProjects, setFilteredProjects] = useState([]);
 
-  console.log(projects);
-
   // Fetch projects from backend
   useEffect(() => {
     const fetchProjects = async () => {

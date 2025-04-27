@@ -14,6 +14,19 @@ export function getInternetIdentityNetwork() {
   }
 }
 
+export function convertE8sToToken(e8s) {
+  if (!e8s) return 0;
+  const cleanE8s = e8s.toString().replace(/,/g, "").replace(/_/g, "");
+  const number = parseInt(cleanE8s) / 100_000_000;
+  const decimalStr = number.toString();
+
+  if (!decimalStr.includes(".") || !parseFloat(decimalStr.split(".")[1])) {
+    return Math.floor(number);
+  }
+
+  return parseFloat(number.toString());
+}
+
 export function getStorageNetwork() {
   const canisterId = process.env.CANISTER_ID_STORAGE;
   const network = process.env.DFX_NETWORK;

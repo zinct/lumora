@@ -1,6 +1,7 @@
 {
   "canisters": {
     "backend": {
+      "dependencies": ["token", "storage"],
       "main": "src/backend/main.mo",
       "type": "motoko"
     },
@@ -9,7 +10,7 @@
       "type": "motoko"
     },
     "frontend": {
-      "dependencies": ["backend", "token"],
+      "dependencies": ["backend"],
       "source": ["src/frontend/dist"],
       "type": "assets",
       "workspace": "frontend"
@@ -17,7 +18,7 @@
     "storage": {
       "type": "assets",
       "source": ["src/assets"],
-      "build": []
+      "build": "echo 'skip build'"
     },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",

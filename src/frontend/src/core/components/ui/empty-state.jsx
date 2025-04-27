@@ -93,42 +93,42 @@ const EmptyState = ({ title = "No items found", description = "There are no item
   const getVariantStyles = () => {
     const styles = {
       default: {
-        bgClass: "bg-muted/30",
+        bgClass: "",
         accentClass: "text-muted-foreground",
         buttonClass: "bg-primary hover:bg-primary/90",
       },
       projects: {
-        bgClass: "bg-transparent",
+        bgClass: "",
         accentClass: "text-blue-400",
         buttonClass: "bg-blue-600 hover:bg-blue-700 text-white",
       },
       nfts: {
-        bgClass: "bg-purple-950/20",
+        bgClass: "",
         accentClass: "text-purple-400",
         buttonClass: "bg-purple-600 hover:bg-purple-700 text-white",
       },
       collections: {
-        bgClass: "bg-amber-950/20",
+        bgClass: "",
         accentClass: "text-amber-400",
         buttonClass: "bg-amber-600 hover:bg-amber-700 text-white",
       },
       search: {
-        bgClass: "bg-slate-950/20",
+        bgClass: "",
         accentClass: "text-slate-400",
         buttonClass: "bg-slate-600 hover:bg-slate-700 text-white",
       },
       inbox: {
-        bgClass: "bg-green-950/20",
+        bgClass: "",
         accentClass: "text-green-400",
         buttonClass: "bg-green-600 hover:bg-green-700 text-white",
       },
       eco: {
-        bgClass: "bg-emerald-950/20",
+        bgClass: "",
         accentClass: "text-emerald-400",
         buttonClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
       },
       error: {
-        bgClass: "bg-red-950/20",
+        bgClass: "",
         accentClass: "text-red-400",
         buttonClass: "bg-red-600 hover:bg-red-700 text-white",
       },

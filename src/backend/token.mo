@@ -12,6 +12,7 @@ import Array "mo:base/Array";
 
 actor Token {
     // Token Types
+    stable var logo : Text = "";
     public type Timestamp = Nat64;
     public type Duration = Nat64;
     public type Subaccount = Blob;
@@ -85,7 +86,6 @@ actor Token {
 
     // Constants
     private let platformFeePercentage: Nat = 10;
-    private let platformAccount: Account = { owner = Principal.fromActor(Token); subaccount = null };
     private let defaultSubaccount : Subaccount = Blob.fromArrayMut(Array.init(32, 0 : Nat8));
     private let maxMemoSize = 32;
     private let permittedDriftNanos : Duration = 60_000_000_000;
@@ -104,26 +104,21 @@ actor Token {
         transfer_fee : Nat;
     } = {
         initial_mints = [];
-        minting_account = platformAccount;
-        token_name = "Lumora";
-        token_symbol = "LUM";
+        minting_account = { owner = Principal.fromActor(Token); subaccount = null };
+        token_name = "";
+        token_symbol = "";
         decimals = 0;
         transfer_fee = 0;
     };
 
     // ===== SYSTEM FUNCTIONS =====
     system func preupgrade() {
-        persistedLog := log.toArray();
+        persistedLog := Buffer.toArray(log);
     };
 
     system func postupgrade() {
-        if (not isInitialized) {
-            log := makeGenesisChain();
-            isInitialized := true;
-        } else {
-            log := Buffer.Buffer<Transaction>(persistedLog.size());
-            for (tx in Array.vals(persistedLog)) { log.add(tx); };
-        };
+        log := Buffer.Buffer<Transaction>(persistedLog.size());
+        for (tx in Array.vals(persistedLog)) { log.add(tx); };
     };
 
     // ===== TOKEN MANAGEMENT FUNCTIONS =====
@@ -136,7 +131,7 @@ actor Token {
         created_at_time : ?Timestamp;
     }) : async Result<TxIndex, TransferError> {
         let from = { owner = caller; subaccount = from_subaccount };
-        applyTransfer({
+        await applyTransfer({
             spender = from;
             source = #Icrc1Transfer;
             from = from;
@@ -159,6 +154,14 @@ actor Token {
     public query func icrc1_minting_account() : async Account { tokenConfig.minting_account; };
     public query func icrc1_total_supply() : async Tokens {
         balance(tokenConfig.minting_account, log);
+    };
+    public query func icrc1_supported_standards() : async [{ name : Text; url : Text }] {
+        return [
+            {
+                name = "ICRC-1";
+                url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1";
+            },
+        ];
     };
 
     // ===== HELPERS FUNCTIONS =====
@@ -284,10 +287,11 @@ actor Token {
     private func recordTransaction(tx : Transaction) : TxIndex {
         let idx = log.size();
         log.add(tx);
+        persistedLog := Buffer.toArray(log);
         idx;
     };
 
-    private func applyTransfer(args : Transfer) : Result<TxIndex, TransferError> {
+    private func applyTransfer(args : Transfer) : async Result<TxIndex, TransferError> {
         validateSubaccount(args.from.subaccount);
         validateSubaccount(args.to.subaccount);
         validateMemo(args.memo);
@@ -314,77 +318,87 @@ actor Token {
     };
 
     private func isAdmin(caller: Principal) : Bool {
-        return caller == platformAccount.owner;
+        return caller == tokenConfig.minting_account.owner;
     };
 
     // ===== PUBLIC FUNCTIONS =====
-    public func getMintingAccountPrincipal() : async Text {
-        return Principal.toText(tokenConfig.minting_account.owner);
+    public func getPlatformAccount() : async Account {
+        tokenConfig.minting_account;
     };
 
-    private func getBalance(account: Account) : async Nat {
-        var balance : Nat = 0;
+    public shared ({ caller }) func initializeToken({
+        tokenName : Text;
+        tokenSymbol : Text;
+        initialSupply : Nat;
+        tokenLogo : Text;
+    }) : async Result<Text, Text> {
+        if (isInitialized) {
+            return #Err("Token already created");
+        };
+
+        if (Principal.isAnonymous(caller)) {
+            return #Err("Cannot create token with anonymous principal");
+        };
+
+        tokenConfig := {
+            initial_mints = [{
+                account = { owner = caller; subaccount = null };
+                amount = initialSupply;
+            }];
+            minting_account = { owner = caller; subaccount = null };
+            token_name = tokenName;
+            token_symbol = tokenSymbol;
+            decimals = 8;   
+            transfer_fee = 10_000;
+        };
+
+        logo := tokenLogo;
+        log := makeGenesisChain();
+
+        isInitialized := true;
+
+        #Ok("Token created");
+    };
+
+    public shared ({ caller }) func getTransactionHistory() : async [Transaction] {
+        let callerAccount = { owner = caller; subaccount = null };
+        let filteredTransactions = Buffer.Buffer<Transaction>(0);
         
-        for (transaction in log.vals()) {
-            switch (transaction.operation) {
-                case (#Mint(mint)) {
-                    if (mint.to == account) {
-                        balance += mint.amount;
-                    };
+        for (tx in log.vals()) {
+            switch (tx.operation) {
+                case (#Transfer { from; to; amount; }) {
+                    if (from == callerAccount or to == callerAccount) {
+                        filteredTransactions.add(tx);
+                    }
                 };
-                case (#Transfer(transfer)) {
-                    if (transfer.to == account) {
-                        balance += transfer.amount;
-                    };
-                    if (transfer.from == account) {
-                        balance -= transfer.amount;
-                    };
+                case (#Mint { to; amount }) {
+                    if (to == callerAccount) {
+                        filteredTransactions.add(tx);
+                    }
                 };
-                case (#Burn(burn)) {
-                    if (burn.from == account) {
-                        balance -= burn.amount;
-                    };
+                case (#Burn { from; amount }) {
+                    if (from == callerAccount) {
+                        filteredTransactions.add(tx);
+                    }
                 };
-                case (#Approve(args)) {
-                    if (accountsEqual(args.from, account)) { balance -= transaction.fee };
+                case (#Approve { from; amount; }) {
+                    if (from == callerAccount) {
+                        filteredTransactions.add(tx);
+                    }
                 };
             };
         };
-        return balance;
-    };
-
-    public shared ({ caller }) func getCommunityBalance(communityId: Principal) : async Result<Nat, Text> {
-        if (Principal.isAnonymous(caller)) {
-            return #Err("Anonymous participants cannot get balance");
-        };
-
-        return #Ok(await getBalance({ owner = communityId; subaccount = null }));
-    };
-
-    public shared ({ caller }) func mintToCommunity(communityId: Principal, amount: Nat) : async Result<Text, Text> {
-        if (not isAdmin(caller)) {
-            return #Err("Only admin can mint tokens");
-        };
-
-        let now = Nat64.fromNat(Int.abs(Time.now()));
         
-        let mintOp : Transaction = {
-            operation = #Mint({
-                from = tokenConfig.minting_account;
-                to = { owner = communityId; subaccount = null };
-                amount = amount;
-                memo = ?"Mint to community";
-                created_at_time = ?now;
-                fee = null;
-                source = #Icrc1Transfer;
-                spender = tokenConfig.minting_account;
-            });
-            fee = 0;
-            timestamp = now;
+        Buffer.toArray(filteredTransactions);
+    };
+
+    public shared ({ caller }) func deleteToken() : async Result<Text, Text> {
+        if (not isAdmin(caller)) {
+            return #Err("Only admin can delete token");
         };
 
-        log.add(mintOp);
-        return #Ok("Tokens minted successfully");
+        isInitialized := false;
+        #Ok("Token deleted");
     };
 
     // Utility Functions
@@ -397,5 +411,31 @@ actor Token {
             return ?log.get(0);
         };
         return null;
+    };
+
+    // Admin Functions
+    public shared ({ caller }) func mintToAccount(account: Account, amount: Nat) : async Result<Text, Text> {
+        if (not isAdmin(caller)) {
+            return #Err("Only admin can mint tokens");
+        };
+
+        let now = Nat64.fromNat(Int.abs(Time.now()));
+        let mintOp : Transaction = {
+            operation = #Mint({
+                from = tokenConfig.minting_account;
+                to = account;
+                amount = amount;
+                memo = ?"Mint to account";
+                created_at_time = ?now;
+                fee = null;
+                source = #Icrc1Transfer;
+                spender = tokenConfig.minting_account;
+            });
+            fee = 0;
+            timestamp = now;
+        };
+
+        log.add(mintOp);
+        return #Ok("Tokens minted successfully");
     };
 }; 

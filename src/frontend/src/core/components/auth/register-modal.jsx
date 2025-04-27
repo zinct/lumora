@@ -74,7 +74,7 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
     const registerResponse = await backend.register({
       name: role === "participant" ? formData.participantName : formData.communityName,
       registerAs: role,
-      initialToken: role === "community" ? [Number(formData.initialToken)] : [],
+      initialToken: role === "community" ? [Number(formData.initialToken) * 100_000_000] : [],
     });
 
     if ("Ok" in registerResponse) {

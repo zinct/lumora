@@ -10,17 +10,23 @@ import { ProjectForm } from "@/core/components/community/project-form";
 import { backend } from "declarations/backend";
 import { useAuth } from "@/core/providers/auth-provider";
 import { useToast } from "@/core/hooks/use-toast";
-import { Actor } from "@dfinity/agent";
+import { useNavigate } from "react-router";
+import { EmptyState } from "@/core/components/ui/empty-state";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
+import { Award } from "lucide-react";
 
 export function ProjectManagement() {
   const { isAuthenticated, identity } = useAuth();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("active");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -83,7 +89,7 @@ export function ProjectManagement() {
 
   const handleCreateProject = async (projectData) => {
     try {
-      setIsLoading(true);
+      setIsSubmitting(true);
 
       if (!identity) {
         toast({
@@ -99,25 +105,60 @@ export function ProjectManagement() {
       const expiredAt = BigInt(projectData.endDate.getTime() * 1_000_000);
 
       // Handle image upload if exists
-      let imageUrl = null;
+      let imageData = null;
+      if (projectData.image) {
+        try {
+          // Convert File to Uint8Array
+          const arrayBuffer = await projectData.image.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          // Convert to array of Nat8
+          imageData = Array.from(uint8Array);
+        } catch (fileError) {
+          console.error("Error processing file:", fileError);
+          toast({
+            title: "Error",
+            description: `Failed to process image: ${fileError.message}`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      console.log("projectData", { [projectData.category]: null });
+
+      // Prepare project parameters
+      const params = {
+        title: projectData.title,
+        description: projectData.description,
+        startDate: startDate,
+        expiredAt: expiredAt,
+        reward: BigInt(projectData.reward),
+        imageData: [imageData],
+        category: { [projectData.category]: null },
+        maxParticipants: BigInt(projectData.maxParticipants),
+        address: projectData.address,
+        impact: projectData.impact,
+      };
 
       // Call backend to create project
-      // const response = await backend.createProject(params);
+      const response = await backend.createProject(params);
 
-      // if (response.Ok) {
-      //   toast({
-      //     title: "Success",
-      //     description: "Project created successfully",
-      //   });
-      //   setIsCreateDialogOpen(false);
-      //   fetchProjects(); // Refresh project list
-      // } else {
-      //   toast({
-      //     title: "Error",
-      //     description: response.Err,
-      //     variant: "destructive",
-      //   });
-      // }
+      console.log(response, "response");
+
+      if ("Ok" in response) {
+        toast({
+          title: "Success",
+          description: "Project created successfully",
+        });
+        setIsCreateDialogOpen(false);
+        fetchProjects(); // Refresh project list
+      } else {
+        toast({
+          title: "Error",
+          description: response.Err,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
@@ -126,7 +167,7 @@ export function ProjectManagement() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -248,7 +289,7 @@ export function ProjectManagement() {
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>Fill in the details to create a new sustainability project</DialogDescription>
             </DialogHeader>
-            <ProjectForm onSubmit={handleCreateProject} onCancel={() => setIsCreateDialogOpen(false)} />
+            <ProjectForm onSubmit={handleCreateProject} onCancel={() => setIsCreateDialogOpen(false)} isSubmitting={isSubmitting} />
           </DialogContent>
         </Dialog>
       </div>
@@ -261,67 +302,73 @@ export function ProjectManagement() {
           <CardDescription>Manage all your sustainability projects</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="rounded-md border">
-            <div className="grid grid-cols-12 p-4 bg-muted text-sm font-medium">
-              <div className="col-span-4">Project</div>
-              <div className="col-span-2 text-center">Category</div>
-              <div className="col-span-2 text-center">Timeline</div>
-              <div className="col-span-1 text-center">Participants</div>
-              <div className="col-span-1 text-center">Reward</div>
-              <div className="col-span-1 text-center">Status</div>
-              <div className="col-span-1 text-center">Actions</div>
+          {filteredProjects.length === 0 ? (
+            <div className="p-8">
+              <EmptyState title="No Projects Found" description="There are no projects to display at the moment. Create a new project to get started." variant="projects" icon={Leaf} actionLabel="Create Project" onAction={() => setIsCreateDialogOpen(true)} />
             </div>
-            <div className="divide-y">
-              {filteredProjects.map((project) => (
-                <div key={project.id} className="grid grid-cols-12 p-4 items-center">
-                  <div className="col-span-4">
-                    <div className="font-medium">{project.title}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-xs">{project.description}</div>
-                  </div>
-                  <div className="col-span-2 text-center">
-                    <Badge variant="outline">{Object.keys(project.category)}</Badge>
-                  </div>
-                  <div className="col-span-2 text-center text-sm">
-                    <div className="flex items-center justify-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>
-                        {project.startDate.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
+          ) : (
+            <div className="rounded-md border">
+              <div className="grid grid-cols-12 p-4 bg-muted text-sm font-medium">
+                <div className="col-span-4">Project</div>
+                <div className="col-span-2 text-center">Category</div>
+                <div className="col-span-2 text-center">Timeline</div>
+                <div className="col-span-1 text-center">Participants</div>
+                <div className="col-span-1 text-center">Reward</div>
+                <div className="col-span-1 text-center">Status</div>
+                <div className="col-span-1 text-center">Actions</div>
+              </div>
+              <div className="divide-y">
+                {filteredProjects.map((project) => (
+                  <div key={project.id} className="grid grid-cols-12 p-4 items-center">
+                    <div className="col-span-4">
+                      <div className="font-medium">{project.title}</div>
+                      <div className="text-sm text-muted-foreground truncate max-w-xs">{project.description}</div>
                     </div>
-                    <div className="text-muted-foreground">to {project.expiredAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-                  </div>
-                  <div className="col-span-1 text-center">
-                    <div className="flex items-center justify-center">
-                      <Users className="h-3 w-3 mr-1" />
-                      <span>
-                        {project.participants} / {project.maxParticipants}
-                      </span>
+                    <div className="col-span-2 text-center">
+                      <Badge variant="outline">{Object.keys(project.category)}</Badge>
+                    </div>
+                    <div className="col-span-2 text-center text-sm">
+                      <div className="flex items-center justify-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>
+                          {project.startDate.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground">to {project.expiredAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <div className="flex items-center justify-center">
+                        <Users className="h-3 w-3 mr-1" />
+                        <span>
+                          {project.participants} / {project.maxParticipants}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <div className="flex items-center justify-center">
+                        <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
+                        <span>{project.reward} LUM</span>
+                      </div>
+                    </div>
+                    <div className="col-span-1 text-center">{renderProjectStatus(project.status)}</div>
+                    <div className="col-span-1 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/projects/${project.id}`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="col-span-1 text-center">
-                    <div className="flex items-center justify-center">
-                      <Leaf className="h-3 w-3 mr-1 text-emerald-500" />
-                      <span>{project.reward} LUM</span>
-                    </div>
-                  </div>
-                  <div className="col-span-1 text-center">{renderProjectStatus(project.status)}</div>
-                  <div className="col-span-1 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
         <CardFooter className="flex justify-between pt-6">
           <div className="text-sm text-muted-foreground">Showing {filteredProjects.length} projects</div>

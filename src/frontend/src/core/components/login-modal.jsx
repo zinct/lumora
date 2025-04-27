@@ -86,10 +86,10 @@ export function LoginModal({ isOpen, onClose, redirectPath = "/" }) {
           )}
 
           <div className={cn("mt-4 w-full rounded-lg border border-border/50 p-4 transition-all", "hover:border-emerald-500/50 hover:bg-emerald-500/5", status === "error" ? "border-red-500/30" : "", isLoading ? "opacity-80" : "")}>
-            <button className="flex w-full items-center justify-between" onClick={handleLogin} disabled={isLoading || status === "success"}>
+            <button className="flex w-full items-center justify-center" onClick={handleLogin} disabled={isLoading || status === "success"}>
               <div className="flex items-center">
-                <div className="mr-3 h-10 w-10 overflow-hidden rounded-full border">
-                  <img src="/images/internet-identity.png" alt="Internet Identity" width={40} height={40} />
+                <div className="mr-3 h-10 w-10 overflow-hidden rounded-full border flex items-center justify-center">
+                  <img src="/images/internet-identity.png" alt="Internet Identity" width={40} height={40} className="object-center" />
                 </div>
                 <div className="text-left">
                   <div className="font-medium">Internet Identity</div>
