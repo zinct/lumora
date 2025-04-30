@@ -1,27 +1,22 @@
 import { useState } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/core/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 import { DashboardOverview } from "@/core/components/community/dashboard-overview";
 import { ProjectManagement } from "@/core/components/community/project-management";
 import { SubmissionReview } from "@/core/components/community/submission-review";
 import { RewardManagement } from "@/core/components/community/reward-management";
 import { AdminGuard } from "@/core/components/community/admin-guard";
 import CommunityBalance from "../core/components/community/community-balance";
+import { useSearchParams } from "react-router";
 
 export default function CommunityDashboardPage() {
-  const [isAdmin, setIsAdmin] = useState(true); // In a real app, this would be determined by auth state
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  console.log("params", searchParams.get("tab"));
 
   // If not logged in or not an admin, show login prompt
   if (!isAdmin) {
-    return (
-      <AdminGuard
-        onLogin={() => openLoginModal("community", "/community/admin")}
-      />
-    );
+    return <AdminGuard onLogin={() => openLoginModal("community", "/community/admin")} />;
   }
 
   return (
@@ -29,24 +24,17 @@ export default function CommunityDashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Community Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage projects, challenges, and rewards for the Lumora community
-          </p>
+          <p className="text-muted-foreground mt-1">Manage projects, challenges, and rewards for the Lumora community</p>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+      <Tabs defaultValue={`${searchParams.get("tab") || "projects"}`} className="space-y-6">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="rewards">Rewards</TabsTrigger>
-          <TabsTrigger value="analytics">Balance</TabsTrigger>
+          <TabsTrigger value="balance">Balance</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <DashboardOverview />
-        </TabsContent>
 
         <TabsContent value="projects" className="space-y-6">
           <ProjectManagement />
@@ -60,7 +48,7 @@ export default function CommunityDashboardPage() {
           <RewardManagement />
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="balance" className="space-y-6">
           <CommunityBalance />
         </TabsContent>
       </Tabs>

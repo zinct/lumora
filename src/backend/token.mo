@@ -326,6 +326,10 @@ actor Token {
         tokenConfig.minting_account;
     };
 
+    public func getDecimals() : async Nat8 {
+        tokenConfig.decimals;
+    };
+
     public shared ({ caller }) func initializeToken({
         tokenName : Text;
         tokenSymbol : Text;
@@ -360,32 +364,34 @@ actor Token {
         #Ok("Token created");
     };
 
-    public shared ({ caller }) func getTransactionHistory() : async [Transaction] {
-        let callerAccount = { owner = caller; subaccount = null };
+    public shared ({ caller }) func getAllTransactions() : async [Transaction] {
+        log.toArray();
+    };  
+
+    public func transactionHistoryOf(account: Account) : async [Transaction] {
         let filteredTransactions = Buffer.Buffer<Transaction>(0);
         
         for (tx in log.vals()) {
-            switch (tx.operation) {
+            // Check if caller is involved in any transaction type
+            let isInvolved = switch (tx.operation) {
                 case (#Transfer { from; to; amount; }) {
-                    if (from == callerAccount or to == callerAccount) {
-                        filteredTransactions.add(tx);
-                    }
+                    from == account or to == account
                 };
                 case (#Mint { to; amount }) {
-                    if (to == callerAccount) {
-                        filteredTransactions.add(tx);
-                    }
+                    to == account
                 };
                 case (#Burn { from; amount }) {
-                    if (from == callerAccount) {
-                        filteredTransactions.add(tx);
-                    }
+                    from == account
                 };
                 case (#Approve { from; amount; }) {
-                    if (from == callerAccount) {
-                        filteredTransactions.add(tx);
-                    }
+                    from == account
                 };
+                // Add any other transaction types here
+                case (_) { false };
+            };
+
+            if (isInvolved) {
+                filteredTransactions.add(tx);
             };
         };
         
@@ -411,31 +417,5 @@ actor Token {
             return ?log.get(0);
         };
         return null;
-    };
-
-    // Admin Functions
-    public shared ({ caller }) func mintToAccount(account: Account, amount: Nat) : async Result<Text, Text> {
-        if (not isAdmin(caller)) {
-            return #Err("Only admin can mint tokens");
-        };
-
-        let now = Nat64.fromNat(Int.abs(Time.now()));
-        let mintOp : Transaction = {
-            operation = #Mint({
-                from = tokenConfig.minting_account;
-                to = account;
-                amount = amount;
-                memo = ?"Mint to account";
-                created_at_time = ?now;
-                fee = null;
-                source = #Icrc1Transfer;
-                spender = tokenConfig.minting_account;
-            });
-            fee = 0;
-            timestamp = now;
-        };
-
-        log.add(mintOp);
-        return #Ok("Tokens minted successfully");
     };
 }; 

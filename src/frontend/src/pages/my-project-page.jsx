@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, ArrowUpDown, Eye, FileText, Leaf, Clock, Ban, CalendarClock } from "lucide-react";
+import { Search, HelpCircle, Eye, FileText, Leaf, Clock, Ban, CalendarClock } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";

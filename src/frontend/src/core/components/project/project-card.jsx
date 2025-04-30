@@ -39,8 +39,8 @@ const renderProjectStatus = (status) => {
     default:
       return (
         <Badge variant="secondary" className="ml-auto bg-gray-500/20 text-gray-400">
-          <HelpCircle className="h-3 w-3 mr-1" />
-          Unknown
+          <Clock className="h-3 w-3 mr-1" />
+          Closed
         </Badge>
       );
   }

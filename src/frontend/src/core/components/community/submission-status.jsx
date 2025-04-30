@@ -1,11 +1,10 @@
-
-
-import { CheckCircle, Clock, XCircle } from "lucide-react"
+import { CheckCircle, Clock, XCircle } from "lucide-react";
 
 export function SubmissionStatus({ submission }) {
   const getStatusDisplay = () => {
-    switch (submission.status) {
-      case "Approved":
+    console.log(JSON.stringify(submission.status));
+    switch (JSON.stringify(submission.status)) {
+      case `{"approved":null}`:
         return {
           icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
           text: "Approved",
@@ -13,8 +12,8 @@ export function SubmissionStatus({ submission }) {
           bgColor: "bg-emerald-500/10",
           borderColor: "border-emerald-500/20",
           textColor: "text-emerald-500",
-        }
-      case "Rejected":
+        };
+      case `{"rejected":null}`:
         return {
           icon: <XCircle className="h-5 w-5 text-red-500" />,
           text: "Rejected",
@@ -22,8 +21,8 @@ export function SubmissionStatus({ submission }) {
           bgColor: "bg-red-500/10",
           borderColor: "border-red-500/20",
           textColor: "text-red-500",
-        }
-      case "Pending":
+        };
+      case `{"pending":null}`:
       default:
         return {
           icon: <Clock className="h-5 w-5 text-amber-500" />,
@@ -32,11 +31,11 @@ export function SubmissionStatus({ submission }) {
           bgColor: "bg-amber-500/10",
           borderColor: "border-amber-500/20",
           textColor: "text-amber-500",
-        }
+        };
     }
-  }
+  };
 
-  const status = getStatusDisplay()
+  const status = getStatusDisplay();
 
   return (
     <div className={`p-4 rounded-lg ${status.bgColor} border ${status.borderColor}`}>
@@ -48,5 +47,5 @@ export function SubmissionStatus({ submission }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

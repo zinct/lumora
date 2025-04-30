@@ -16,6 +16,7 @@ import { getStorageNetwork } from "@/core/lib/canisterUtils";
 export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [tab, setTab] = useState("overview");
   const { toast } = useToast();
   const { user, isAuthenticated, login, identity } = useAuth();
   const [project, setProject] = useState(null);
@@ -299,9 +300,9 @@ export default function ProjectDetailPage() {
         );
       default:
         return (
-          <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
-            <HelpCircle className="h-3 w-3 mr-1" />
-            Unknown
+          <Badge variant="secondary" className="ml-auto bg-gray-500/20 text-gray-400">
+            <Clock className="h-3 w-3 mr-1" />
+            Closed
           </Badge>
         );
     }
@@ -420,7 +421,7 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
 
-              <Tabs defaultValue="overview" className="space-y-6">
+              <Tabs defaultValue={tab} value={tab} onValueChange={setTab} className="space-y-6">
                 <TabsList>
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   {isAuthenticated && hasJoined && <TabsTrigger value="submit">Submit Evidence</TabsTrigger>}
@@ -614,7 +615,7 @@ export default function ProjectDetailPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <Button className={`w-full ${parseInt(project.status) !== 1 ? "bg-gray-600 hover:bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}`} disabled={parseInt(project.status) !== 1}>
+                    <Button className={`w-full ${parseInt(project.status) !== 1 ? "bg-gray-600 hover:bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}`} disabled={parseInt(project.status) !== 1} onClick={() => setTab("submit")}>
                       {isSubmittingEvidence ? "Submitting..." : parseInt(project.status) !== 1 ? "Not Started Yet" : "Submit Evidence"}
                     </Button>
                   </CardFooter>

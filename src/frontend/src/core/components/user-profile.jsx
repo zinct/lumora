@@ -10,6 +10,8 @@ export function UserProfileHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, logout, user } = useAuth();
 
+  console.log("user", user);
+
   const handleLogout = async () => {
     await logout();
   };

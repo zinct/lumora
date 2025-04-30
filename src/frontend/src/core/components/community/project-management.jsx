@@ -220,6 +220,13 @@ export function ProjectManagement() {
             Closed
           </Badge>
         );
+      case 4: // distributed
+        return (
+          <Badge variant="secondary" className="bg-green-500/20 text-green-400">
+            <Award className="h-3 w-3 mr-1" />
+            Distributed
+          </Badge>
+        );
       default:
         return (
           <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">

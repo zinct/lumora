@@ -10,6 +10,7 @@ import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Blob "mo:base/Blob";
 import Int "mo:base/Int";
+import Nat8 "mo:base/Nat8";
 import Error "mo:base/Error";
 import StorageCanister "canister:storage";
 import TokenCanister "canister:token";
@@ -17,6 +18,7 @@ import TokenCanister "canister:token";
 actor Lumora {
     // ===== TYPE DEFINITIONS =====
     type Result<T, E> = { #Ok : T; #Err : E };
+
 
     // Project Types
     type EvidenceId = Nat32;
@@ -185,7 +187,8 @@ actor Lumora {
                     name = params.name;
                 };
 
-                let userAccount = { owner = caller; subaccount = null };
+                if (Option.get(params.initialToken, 0) > 0) {
+                    let userAccount = { owner = caller; subaccount = null };
 
                 let transferArgs = {
                     from_subaccount = null;
@@ -198,16 +201,22 @@ actor Lumora {
 
                 // set initial balance
                 let transferResult = await TokenCanister.icrc1_transfer(transferArgs);
+                
 
                 switch (transferResult) {
                     case (#Ok(_)) {
-                        communityStore.put(caller, community);
-                        return #Ok("Successfully registered as community");
+                            communityStore.put(caller, community);
+                            return #Ok("Successfully registered as community");
+                        };
+                        case (#Err(err)) {
+                            return #Err("Failed to transfer initial token: " # debug_show(err));
+                        };
                     };
-                    case (#Err(err)) {
-                        return #Err("Failed to transfer initial token: " # debug_show(err));
-                    };
+                } else {
+                    communityStore.put(caller, community);
+                    return #Ok("Successfully registered as community");
                 };
+                
             };
             case _ {
                 return #Err("Invalid role. Must be either 'participant' or 'community'");
@@ -449,7 +458,7 @@ actor Lumora {
 
         switch (communityStore.get(caller)) {
             case null { return #Err("Only communities can distribute rewards"); };
-            case (?_) {
+            case (?community) {
                 // Find the project
                 for ((communityId, projects) in projectStore.entries()) {
                     if (communityId == caller) {
@@ -507,9 +516,9 @@ actor Lumora {
                                     let transferArgs = {
                                         from_subaccount = null;
                                         to = { owner = participantId; subaccount = null };
-                                        amount = project.reward;
+                                        amount = project.reward * (10 ** Nat8.toNat(await TokenCanister.getDecimals()));
                                         fee = null;
-                                        memo = null;
+                                        memo = ?Text.encodeUtf8("Reward from " # community.name);
                                         created_at_time = null;
                                     };
 
@@ -690,7 +699,7 @@ actor Lumora {
         var allProjects : [GetProjectsResult] = [];
         for ((communityId, projects) in projectStore.entries()) {
             for (project in projects.vals()) {
-                let community = switch (communityStore.get(communityId)) {
+                let _ = switch (communityStore.get(communityId)) {
                     case null { return #Err("Community not found") };
                     case (?c) { c };
                 };
@@ -1221,15 +1230,200 @@ actor Lumora {
         return #Err("Evidence not found");
     };
 
-    public func adminGetAllUsers() : async ?[(Text, Text)] {
-        let allUsers = Buffer.Buffer<(Text, Text)>(0);
+    public func adminChangeProjectStatus(projectId: ProjectId, status: Nat) : async Result<Text, Text> {
+        // Iterate through all projects to find the one with matching ID
+        for ((communityId, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                if (project.id == projectId) {
+                    // Create updated project with new status
+                    let updatedProject : Project = {
+                        id = project.id;
+                        title = project.title;
+                        description = project.description;
+                        category = project.category;
+                        createdAt = project.createdAt;
+                        startDate = project.startDate;
+                        expiredAt = project.expiredAt;
+                        reward = project.reward;
+                        imageUrl = project.imageUrl;
+                        communityId = project.communityId;
+                        status = status;
+                        maxParticipants = project.maxParticipants;
+                        participants = project.participants;
+                        address = project.address;
+                        impact = project.impact;
+                        evidence = project.evidence;
+                    };
+
+                    // Get existing projects for the community
+                    let existingProjects = switch (projectStore.get(communityId)) {
+                        case null { [] };
+                        case (?projects) { projects };
+                    };
+
+                    // Update the specific project in the array
+                    let updatedProjects = Array.map<Project, Project>(
+                        existingProjects,
+                        func(p) {
+                            if (p.id == projectId) {
+                                updatedProject;
+                            } else {
+                                p;
+                            };
+                        }
+                    );
+
+                    // Update the project store
+                    projectStore.put(communityId, updatedProjects);
+                    return #Ok("Project status updated successfully");
+                };
+            };
+        };
+        return #Err("Project not found");
+    };
+
+    public func adminChangeExpiredAt(projectId: ProjectId, expiredAt: Time.Time) : async Result<Text, Text> {
+        // Iterate through all projects to find the one with matching ID
+        for ((communityId, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                if (project.id == projectId) {
+                    // Create updated project with new expiredAt
+                    let updatedProject : Project = {
+                        id = project.id;
+                        title = project.title;
+                        description = project.description;
+                        category = project.category;
+                        createdAt = project.createdAt;
+                        startDate = project.startDate;
+                        expiredAt = expiredAt;
+                        reward = project.reward;
+                        imageUrl = project.imageUrl;
+                        communityId = project.communityId;
+                        status = project.status;
+                        maxParticipants = project.maxParticipants;
+                        participants = project.participants;
+                        address = project.address;
+                        impact = project.impact;
+                        evidence = project.evidence;
+                    };
+
+                    // Get existing projects for the community
+                    let existingProjects = switch (projectStore.get(communityId)) {
+                        case null { [] };
+                        case (?projects) { projects };
+                    };
+
+                    // Update the specific project in the array
+                    let updatedProjects = Array.map<Project, Project>(
+                        existingProjects,
+                        func(p) {
+                            if (p.id == projectId) {
+                                updatedProject;
+                            } else {
+                                p;
+                            };
+                        }
+                    );
+
+                    // Update the project store
+                    projectStore.put(communityId, updatedProjects);
+                    return #Ok("Project expiration date updated successfully");
+                };
+            };
+        };
+        return #Err("Project not found");
+    };
+
+    public func adminGetBalance() : async Nat {
+        let balance = await TokenCanister.icrc1_balance_of({ owner = Principal.fromActor(Lumora); subaccount = null });
+        balance / (10 ** Nat8.toNat(await TokenCanister.getDecimals()))
+    };
+
+    public func adminTransferTo(to: Principal, amount: Nat) : async Result<Text, Text> {
+        let transferArgs = {
+            from_subaccount = null;
+            to = { owner = to; subaccount = null };
+            amount = amount * (10 ** Nat8.toNat(await TokenCanister.getDecimals()));
+            fee = null;
+            memo = ?Text.encodeUtf8("Transfer from Admin");
+            created_at_time = null;
+        };
+
+        let transferResult = await TokenCanister.icrc1_transfer(transferArgs);
+        switch (transferResult) {
+            case (#Err(err)) {
+                return #Err("Failed to transfer tokens: " # debug_show(err));
+            };
+            case (#Ok(_)) {
+                return #Ok("Tokens transferred successfully");
+            };
+        };
+    };
+
+    public func adminChangeMaxParticipants(projectId: ProjectId, maxParticipants: Nat) : async Result<Text, Text> {
+        // Iterate through all projects to find the one with matching ID
+        for ((communityId, projects) in projectStore.entries()) {
+            for (project in projects.vals()) {
+                if (project.id == projectId) {
+                    // Create updated project with new maxParticipants
+                    let updatedProject : Project = {
+                        id = project.id;
+                        title = project.title;
+                        description = project.description;
+                        category = project.category;
+                        createdAt = project.createdAt;
+                        startDate = project.startDate;
+                        expiredAt = project.expiredAt;
+                        reward = project.reward;
+                        imageUrl = project.imageUrl;
+                        communityId = project.communityId;
+                        status = project.status;
+                        maxParticipants = maxParticipants; // Update only maxParticipants
+                        participants = project.participants; // Keep existing participants
+                        address = project.address;
+                        impact = project.impact;
+                        evidence = project.evidence;
+                    };
+
+                    // Get existing projects for the community
+                    let existingProjects = switch (projectStore.get(communityId)) {
+                        case null { [] };
+                        case (?projects) { projects };
+                    };
+
+                    // Update the specific project in the array while preserving others
+                    let updatedProjects = Array.map<Project, Project>(
+                        existingProjects,
+                        func(p) {
+                            if (p.id == projectId) {
+                                updatedProject;
+                            } else {
+                                p;
+                            };
+                        }
+                    );
+
+                    // Update the project store
+                    projectStore.put(communityId, updatedProjects);
+                    return #Ok("Project max participants updated successfully");
+                };
+            };
+        };
+        return #Err("Project not found");
+    };
+    
+
+    public func adminGetAllUsers() : async ?[(Text, Text, Nat)] {
+        let allUsers = Buffer.Buffer<(Text, Text, Nat)>(0);
 
         for ((id, participant) in participantStore.entries()) {
-            allUsers.add(("Participant", participant.name));
+            let balance = await TokenCanister.icrc1_balance_of({ owner = id; subaccount = null });
+            allUsers.add(("Participant", participant.name, balance));
         };
         
         for ((id, community) in communityStore.entries()) {
-            allUsers.add(("Community", community.name));
+            let balance = await TokenCanister.icrc1_balance_of({ owner = id; subaccount = null });
+            allUsers.add(("Community", community.name, balance));
         };
 
         ?Buffer.toArray(allUsers)
