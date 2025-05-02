@@ -1,12 +1,16 @@
 {
   "canisters": {
     "backend": {
-      "dependencies": ["token", "storage"],
+      "dependencies": ["token", "storage", "nft"],
       "main": "src/backend/main.mo",
       "type": "motoko"
     },
     "token": {
-      "main": "src/backend/token.mo",
+      "main": "src/backend/token/token.mo",
+      "type": "motoko"
+    },
+    "nft": {
+      "main": "src/backend/NFT/NFT.mo",
       "type": "motoko"
     },
     "frontend": {

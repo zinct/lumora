@@ -14,11 +14,11 @@ import Nat8 "mo:base/Nat8";
 import Error "mo:base/Error";
 import StorageCanister "canister:storage";
 import TokenCanister "canister:token";
+import NFTCanister "canister:nft";
 
 actor Lumora {
     // ===== TYPE DEFINITIONS =====
     type Result<T, E> = { #Ok : T; #Err : E };
-
 
     // Project Types
     type EvidenceId = Nat32;
@@ -134,8 +134,6 @@ actor Lumora {
     var communityStore = Map.HashMap<Principal, Community>(0, Principal.equal, Principal.hash);
     stable var participantStorage : [(Principal, Participant)] = [];
     var participantStore = Map.HashMap<Principal, Participant>(0, Principal.equal, Principal.hash);
-
-    stable var isInitialized : Bool = false;
 
     // ===== SYSTEM FUNCTIONS =====
     system func preupgrade() {
@@ -1093,37 +1091,6 @@ actor Lumora {
                     };
                 };
                 return #Err("Evidence not found or you don't have permission to provide feedback");
-            };
-        };
-    };
-
-    // ===== TOKEN FUNCTIONS =====
-    public type InitializeLumoraParams = {
-        tokenName: Text;
-        tokenSymbol: Text;
-        initialSupply: Nat;
-        tokenLogo: Text;
-    };
-
-    public func initializeLumora(params: InitializeLumoraParams) : async Result<Text, Text> {
-        if (isInitialized) {
-            return #Err("Lumora already initialized");
-        };
-
-        let tokenResult = await TokenCanister.initializeToken({
-            tokenName = params.tokenName;
-            tokenSymbol = params.tokenSymbol;
-            initialSupply = params.initialSupply;
-            tokenLogo = params.tokenLogo;
-        });
-
-        switch (tokenResult) {
-            case (#Ok(result)) {
-                isInitialized := true;
-                return #Ok(result);
-            };
-            case (#Err(err)) {
-                return #Err("Failed to initialize token: " # err);
             };
         };
     };

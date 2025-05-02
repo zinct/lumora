@@ -85,7 +85,6 @@ actor Token {
     private stable var isInitialized : Bool = false;
 
     // Constants
-    private let platformFeePercentage: Nat = 10;
     private let defaultSubaccount : Subaccount = Blob.fromArrayMut(Array.init(32, 0 : Nat8));
     private let maxMemoSize = 32;
     private let permittedDriftNanos : Duration = 60_000_000_000;
@@ -322,6 +321,10 @@ actor Token {
     };
 
     // ===== PUBLIC FUNCTIONS =====
+    public func getAllTransactions() : async [Transaction] {
+        Buffer.toArray(log);
+    };  
+
     public func getPlatformAccount() : async Account {
         tokenConfig.minting_account;
     };
@@ -363,10 +366,6 @@ actor Token {
 
         #Ok("Token created");
     };
-
-    public shared ({ caller }) func getAllTransactions() : async [Transaction] {
-        log.toArray();
-    };  
 
     public func transactionHistoryOf(account: Account) : async [Transaction] {
         let filteredTransactions = Buffer.Buffer<Transaction>(0);
