@@ -27,6 +27,12 @@ export function convertE8sToToken(e8s) {
   return parseFloat(number.toString());
 }
 
+export function convertTokenToE8s(token) {
+  if (!token) return 0;
+  const value = Math.floor(token * 100_000_000);
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
+}
+
 export function getStorageNetwork() {
   const canisterId = process.env.CANISTER_ID_STORAGE;
   const network = process.env.DFX_NETWORK;

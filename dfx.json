@@ -10,6 +10,7 @@
       "type": "motoko"
     },
     "nft": {
+      "dependencies": ["token"],
       "main": "src/backend/NFT/NFT.mo",
       "type": "motoko"
     },

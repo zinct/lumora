@@ -10,6 +10,10 @@ import Time "mo:base/Time";
 import Bool "mo:base/Bool";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
+import Nat64 "mo:base/Nat64";
+import TokenCanister "canister:token";
+import Blob "mo:base/Blob";
+import Debug "mo:base/Debug";
 
 actor NFT {
     type Result<T, E> = { #Ok : T; #Err : E };
@@ -266,7 +270,7 @@ actor NFT {
         }
     };
 
-    public shared(msg) func redeem(tokenId : TokenId) : async Result<(), Text> {
+    public shared({ caller }) func redeem(tokenId : TokenId) : async Result<Text, Text> {
         switch (tokens.get(tokenId)) {
             case (null) { 
                 #Err("Token does not exist")
@@ -274,7 +278,7 @@ actor NFT {
             case (?tokenInfo) {
                 let hasRedeemed = Array.find<Principal>(
                     tokenInfo.redeemedBy,
-                    func(p) { Principal.equal(p, msg.caller) }
+                    func(p) { Principal.equal(p, caller) }
                 );
                 
                 if (Option.isSome(hasRedeemed)) {
@@ -290,6 +294,32 @@ actor NFT {
                     };
                 };
 
+                // Transfer tokens using ICRC-2
+                Debug.print("Caller: " # Principal.toText(caller));
+                let transferResult = await TokenCanister.icrc2_transfer_from({
+                    spender_subaccount = null;
+                    from = {
+                        owner = caller; 
+                        subaccount = null;
+                    };
+                    to = {
+                        owner = Principal.fromActor(NFT); 
+                        subaccount = null;
+                    };
+                    amount = tokenInfo.redemptionPrice;
+                    fee = null;
+                    memo = ?Blob.toArray(Text.encodeUtf8("Redemption of NFT " # Nat.toText(tokenId)));
+                    created_at_time = ?Nat64.fromNat(Int.abs(Time.now()));
+                });
+
+                switch (transferResult) {
+                    case (#Err(err)) {
+                        return #Err("Failed to transfer tokens: " # debug_show(err));
+                    };
+                    case (#Ok(_)) {};
+                };
+
+                // Update token info after successful transfer
                 let updatedTokenInfo : TokenInfo = {
                     owner = tokenInfo.owner;
                     metadata = tokenInfo.metadata;
@@ -297,53 +327,80 @@ actor NFT {
                     maxRedemptions = tokenInfo.maxRedemptions;
                     currentRedemptions = tokenInfo.currentRedemptions + 1;
                     redemptionPrice = tokenInfo.redemptionPrice;
-                    redeemedBy = Array.append(tokenInfo.redeemedBy, [msg.caller]);
+                    redeemedBy = Array.append(tokenInfo.redeemedBy, [caller]);
                 };
                 tokens.put(tokenId, updatedTokenInfo);
 
                 redeemEvents.add({
                     tokenId = tokenId;
-                    redeemedBy = msg.caller;
+                    redeemedBy = caller;
                     redeemedAt = Time.now();
                     price = tokenInfo.redemptionPrice;
                     redemptionNumber = tokenInfo.currentRedemptions + 1;
                 });
 
-                #Ok()
+                #Ok("NFT redeemed successfully")
             };
         }
     };
 
     // Query Functions
-    public query func getTokenInfo(tokenId : TokenId) : async ?TokenInfo {
-        tokens.get(tokenId)
-    };
-
-    public query func getOwnerTokens(owner : Principal) : async [TokenId] {
-        switch (ownerTokens.get(owner)) {
-            case (null) { [] };
-            case (?tokens) { tokens };
+    public query func getTokenInfo(tokenId : TokenId) : async Result<?TokenInfo, Text> {
+        switch (tokens.get(tokenId)) {
+            case (null) { #Ok(null) };
+            case (?tokenInfo) { #Ok(?tokenInfo) };
         }
     };
 
-    public query func getTransferEvents() : async [TransferEvent] {
-        Buffer.toArray(transferEvents)
+    public shared query({ caller }) func getRedeemedTokens() : async Result<[(TokenId, TokenMetadata, Nat, ?Nat, Nat)], Text> {
+        let redeemedTokens = Buffer.Buffer<(TokenId, TokenMetadata, Nat, ?Nat, Nat)>(0);
+        
+        for ((tokenId, tokenInfo) in tokens.entries()) {
+            let hasRedeemed = Array.find<Principal>(
+                tokenInfo.redeemedBy,
+                func(p) { Principal.equal(p, caller) }
+            );
+            
+            if (Option.isSome(hasRedeemed)) {
+                redeemedTokens.add((
+                    tokenId, 
+                    tokenInfo.metadata, 
+                    tokenInfo.redemptionPrice,
+                    tokenInfo.maxRedemptions,
+                    tokenInfo.currentRedemptions
+                ));
+            };
+        };
+        
+        #Ok(Buffer.toArray(redeemedTokens))
     };
 
-    public query func getRedeemEvents() : async [RedeemEvent] {
-        Buffer.toArray(redeemEvents)
+    public func getOwnerTokens({ caller: Principal }) : async Result<[TokenId], Text> {
+        Debug.print("Caller: " # Principal.toText(caller));
+        switch (ownerTokens.get(caller)) {
+            case (null) { #Ok([]) };
+            case (?tokens) { #Ok(tokens) };
+        }
     };
 
-    public query func getRedemptionStatus(tokenId : TokenId, caller : Principal) : async ?{
+    public query func getTransferEvents() : async Result<[TransferEvent], Text> {
+        #Ok(Buffer.toArray(transferEvents))
+    };
+
+    public query func getRedeemEvents() : async Result<[RedeemEvent], Text> {
+        #Ok(Buffer.toArray(redeemEvents))
+    };
+
+    public query func getRedemptionStatus(tokenId : TokenId, caller : Principal) : async Result<?{
         maxRedemptions : ?Nat;
         currentRedemptions : Nat;
         available : Bool;
         hasUserRedeemed : Bool;
-    } {
+    }, Text> {
         switch (tokens.get(tokenId)) {
-            case (null) { null };
+            case (null) { #Ok(null) };
             case (?tokenInfo) {
-                ?{
+                #Ok(?{
                     maxRedemptions = tokenInfo.maxRedemptions;
                     currentRedemptions = tokenInfo.currentRedemptions;
                     available = switch (tokenInfo.maxRedemptions) {
@@ -356,30 +413,37 @@ actor NFT {
                             func(p) { Principal.equal(p, caller) }
                         )
                     );
-                }
+                })
             };
         }
     };
 
-    public query func getAvailableNFTs() : async [(TokenId, TokenMetadata, Nat, ?Nat, Nat)] {
-        let available = Buffer.Buffer<(TokenId, TokenMetadata, Nat, ?Nat, Nat)>(0);
+    public shared query({ caller }) func getAvailableNFTs() : async Result<[(TokenId, TokenMetadata, Nat, ?Nat, Nat, Bool)], Text> {
+        let available = Buffer.Buffer<(TokenId, TokenMetadata, Nat, ?Nat, Nat, Bool)>(0);
         for ((tokenId, tokenInfo) in tokens.entries()) {
             let isAvailable = switch (tokenInfo.maxRedemptions) {
                 case (null) { true };
                 case (?max) { tokenInfo.currentRedemptions < max };
             };
             if (isAvailable) {
+                let hasRedeemed = Array.find<Principal>(
+                    tokenInfo.redeemedBy,
+                    func(p) { Principal.equal(p, caller) }
+                );
+
                 available.add((
                     tokenId, 
                     tokenInfo.metadata, 
                     tokenInfo.redemptionPrice,
                     tokenInfo.maxRedemptions,
-                    tokenInfo.currentRedemptions
+                    tokenInfo.currentRedemptions,
+                    Option.isSome(hasRedeemed)
                 ));
             };
         };
-        Buffer.toArray(available)
+        #Ok(Buffer.toArray(available))
     };
+
 
     stable var stableTokens : [(TokenId, TokenInfo)] = [];
     stable var stableOwnerTokens : [(Principal, [TokenId])] = [];

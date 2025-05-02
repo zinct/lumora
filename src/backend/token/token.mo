@@ -9,6 +9,9 @@ import Nat64 "mo:base/Nat64";
 import Int "mo:base/Int";
 import Buffer "mo:base/Buffer";
 import Array "mo:base/Array";
+import HashMap "mo:base/HashMap";
+import Nat "mo:base/Nat";
+import Debug "mo:base/Debug";
 
 actor Token {
     // Token Types
@@ -76,6 +79,72 @@ actor Token {
 
     public type Result<T, E> = { #Ok : T; #Err : E };
 
+    // Add these types after the existing types
+    type Allowance = {
+        amount : Tokens;
+        expires_at : ?Nat64;
+    };
+
+    type AllowanceRequest = {
+        account : Account;
+        spender : Principal;
+    };
+
+    type ApproveRequest = {
+        from_subaccount : ?[Nat8];
+        spender : Principal;
+        amount : Tokens;
+        expires_at : ?Nat64;
+        fee : ?Nat;
+        memo : ?[Nat8];
+        created_at_time : ?Nat64;
+    };
+
+    type ApproveError = {
+        #BadFee : { expected_fee : Nat };
+        #InsufficientFunds : { balance : Nat };
+        #ApproveError : Text;
+        #Expired : { ledger_time : Nat64 };
+        #TooOld;
+        #CreatedInFuture : { ledger_time : Nat64 };
+        #Duplicate : { duplicate_of : Nat };
+        #TemporarilyUnavailable;
+        #GenericError : { error_code : Nat; message : Text };
+    };
+
+    type ApproveResult = {
+        #Ok : Nat;
+        #Err : ApproveError;
+    };
+
+    type TransferFromRequest = {
+        spender_subaccount : ?[Nat8];
+        from : Account;
+        to : Account;
+        amount : Nat;
+        fee : ?Nat;
+        memo : ?[Nat8];
+        created_at_time : ?Nat64;
+    };
+
+    type TransferFromError = {
+        #BadFee : { expected_fee : Nat };
+        #BadBurn : { min_burn_amount : Nat };
+        #InsufficientFunds : { balance : Nat };
+        #InsufficientAllowance : { allowance : Nat };
+        #Expired : { ledger_time : Nat64 };
+        #TooOld;
+        #CreatedInFuture : { ledger_time : Nat64 };
+        #Duplicate : { duplicate_of : Nat };
+        #TemporarilyUnavailable;
+        #GenericError : { error_code : Nat; message : Text };
+    };
+
+    type TransferFromResult = {
+        #Ok : TxIndex;
+        #Err : TransferFromError;
+    };
+
     // ===== STATE VARIABLES =====
     // Admin
     stable var persistedLog : [Transaction] = [];
@@ -89,6 +158,8 @@ actor Token {
     private let maxMemoSize = 32;
     private let permittedDriftNanos : Duration = 60_000_000_000;
     private let transactionWindowNanos : Duration = 24 * 60 * 60 * 1_000_000_000;
+    private let DEFAULT_FEE : Nat = 0;
+    private let MAX_ALLOWED_TIME_DRIFT_NANOS : Nat64 = 60_000_000_000;
 
     // Token Configuration
     stable var tokenConfig : {
@@ -110,17 +181,54 @@ actor Token {
         transfer_fee = 0;
     };
 
+    // Add these variables after the existing variables
+    private stable var allowances : [(Account, Principal, Allowance)] = [];
+    private var allowancesMap = HashMap.HashMap<(Account, Principal), Allowance>(
+        0,
+        func(a, b) { a == b },
+        func((account, principal)) { 
+            let accountHash = Principal.hash(account.owner);
+            let principalHash = Principal.hash(principal);
+            accountHash ^ principalHash
+        }
+    );
+
     // ===== SYSTEM FUNCTIONS =====
     system func preupgrade() {
         persistedLog := Buffer.toArray(log);
+        let entries = allowancesMap.entries();
+        let buffer = Buffer.Buffer<(Account, Principal, Allowance)>(0);
+        for ((key, value) in entries) {
+            let (account, principal) = key;
+            buffer.add((account, principal, value));
+        };
+        allowances := Buffer.toArray(buffer);
     };
 
     system func postupgrade() {
         log := Buffer.Buffer<Transaction>(persistedLog.size());
         for (tx in Array.vals(persistedLog)) { log.add(tx); };
+        
+        let entries = allowances.vals();
+        let map = HashMap.HashMap<(Account, Principal), Allowance>(
+            0,
+            func(a, b) { a == b },
+            func((account, principal)) { 
+                let accountHash = Principal.hash(account.owner);
+                let principalHash = Principal.hash(principal);
+                accountHash ^ principalHash
+            }
+        );
+        
+        for ((account, principal, allowance) in entries) {
+            map.put((account, principal), allowance);
+        };
+        
+        allowancesMap := map;
+        allowances := [];
     };
 
-    // ===== TOKEN MANAGEMENT FUNCTIONS =====
+    // ===== ICRC-1 STANDARD FUNCTIONS =====
     public shared ({ caller }) func icrc1_transfer({
         from_subaccount : ?Subaccount;
         to : Account;
@@ -160,6 +268,10 @@ actor Token {
                 name = "ICRC-1";
                 url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1";
             },
+            {
+                name = "ICRC-2";
+                url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-2";
+            }
         ];
     };
 
@@ -316,47 +428,40 @@ actor Token {
         };
     };
 
-    private func isAdmin(caller: Principal) : Bool {
-        return caller == tokenConfig.minting_account.owner;
-    };
-
     // ===== PUBLIC FUNCTIONS =====
     public func getAllTransactions() : async [Transaction] {
         Buffer.toArray(log);
     };  
 
-    public func getPlatformAccount() : async Account {
-        tokenConfig.minting_account;
-    };
-
     public func getDecimals() : async Nat8 {
         tokenConfig.decimals;
     };
 
-    public shared ({ caller }) func initializeToken({
+    public func initializeToken({
         tokenName : Text;
         tokenSymbol : Text;
         initialSupply : Nat;
         tokenLogo : Text;
+        principal : Principal;
     }) : async Result<Text, Text> {
         if (isInitialized) {
             return #Err("Token already created");
         };
 
-        if (Principal.isAnonymous(caller)) {
+        if (Principal.isAnonymous(principal)) {
             return #Err("Cannot create token with anonymous principal");
         };
 
         tokenConfig := {
             initial_mints = [{
-                account = { owner = caller; subaccount = null };
+                account = { owner = principal; subaccount = null };
                 amount = initialSupply;
             }];
-            minting_account = { owner = caller; subaccount = null };
+            minting_account = { owner = principal; subaccount = null };
             token_name = tokenName;
             token_symbol = tokenSymbol;
             decimals = 8;   
-            transfer_fee = 10_000;
+            transfer_fee = 0;
         };
 
         logo := tokenLogo;
@@ -397,24 +502,212 @@ actor Token {
         Buffer.toArray(filteredTransactions);
     };
 
-    public shared ({ caller }) func deleteToken() : async Result<Text, Text> {
-        if (not isAdmin(caller)) {
-            return #Err("Only admin can delete token");
-        };
-
-        isInitialized := false;
-        #Ok("Token deleted");
-    };
-
-    // Utility Functions
-    public query func getInitializationStatus() : async Bool {
-        return isInitialized;
-    };
-
     public query func getGenesisTransaction() : async ?Transaction {
         if (log.size() > 0) {
             return ?log.get(0);
         };
         return null;
+    };
+
+    private func validateApproveRequest(req : ApproveRequest) : ApproveResult {
+        let fee = Option.get(req.fee, DEFAULT_FEE);
+        if (fee != DEFAULT_FEE) {
+            return #Err(#BadFee { expected_fee = DEFAULT_FEE });
+        };
+
+        // Add amount validation to prevent overflow
+        if (req.amount == 0) {
+            return #Err(#ApproveError("Amount must be greater than 0"));
+        };
+
+        let now = Nat64.fromNat(Int.abs(Time.now()));
+        switch (req.created_at_time) {
+            case (?created_at_time) {
+                if (created_at_time > now + MAX_ALLOWED_TIME_DRIFT_NANOS) {
+                    return #Err(#CreatedInFuture { ledger_time = now });
+                };
+                if (created_at_time < now - MAX_ALLOWED_TIME_DRIFT_NANOS) {
+                    return #Err(#TooOld);
+                };
+            };
+            case (null) {};
+        };
+
+        #Ok(0)
+    };
+
+    private func validateTransferFromRequest(req : TransferFromRequest, caller : Principal) : TransferFromResult {
+        let fee = Option.get(req.fee, DEFAULT_FEE);
+        if (fee != DEFAULT_FEE) {
+            return #Err(#BadFee { expected_fee = DEFAULT_FEE });
+        };
+
+        let now = Nat64.fromIntWrap(Time.now());
+        switch (req.created_at_time) {
+            case (?created_at_time) {
+                if (created_at_time > now + MAX_ALLOWED_TIME_DRIFT_NANOS) {
+                    return #Err(#CreatedInFuture { ledger_time = now });
+                };
+                if (created_at_time < now - MAX_ALLOWED_TIME_DRIFT_NANOS) {
+                    return #Err(#TooOld);
+                };
+            };
+            case (null) {};
+        };
+
+        let fromAccount = req.from;
+
+        let allowanceKey = (fromAccount, caller);
+        let allowance = switch (allowancesMap.get(allowanceKey)) {
+            case (?allowance) {
+                switch (allowance.expires_at) {
+                    case (?expires_at) {
+                        if (expires_at < now) {
+                            return #Err(#Expired { ledger_time = now });
+                        };
+                    };
+                    case (null) {};
+                };
+                allowance;
+            };
+            case (null) {
+                return #Err(#InsufficientAllowance { allowance = 0 });
+            };
+        };
+
+        if (allowance.amount < req.amount) {
+            return #Err(#InsufficientAllowance { allowance = allowance.amount });
+        };
+
+        #Ok(0)
+    };
+
+    public shared({ caller }) func icrc2_approve(request : ApproveRequest) : async ApproveResult {
+        let from : Account = {
+            owner = caller;
+            subaccount = switch (request.from_subaccount) {
+                case (?subaccount) ?Blob.fromArray(subaccount);
+                case (null) null;
+            };
+        };
+
+        // Validate request
+        switch (validateApproveRequest(request)) {
+            case (#Err(err)) return #Err(err);
+            case (#Ok(_)) {};
+        };
+
+        // Check if user has enough balance
+        let balance = await icrc1_balance_of(from);
+        if (balance < request.amount) {
+            return #Err(#InsufficientFunds { balance });
+        };
+
+        // Create allowance record
+        let allowance : Allowance = {
+            amount = request.amount;
+            expires_at = request.expires_at;
+        };
+
+        // Store allowance
+        let key = (from, request.spender);
+        allowancesMap.put(key, allowance);
+
+        // Record transaction
+        let now = Nat64.fromNat(Int.abs(Time.now()));
+        let tx : Transaction = {
+            operation = #Approve({
+                from = from;
+                spender = { owner = request.spender; subaccount = null };
+                amount = request.amount;
+                expires_at = request.expires_at;
+                fee = ?DEFAULT_FEE;
+                memo = switch (request.memo) {
+                    case (?memo) ?Blob.fromArray(memo);
+                    case (null) null;
+                };
+                created_at_time = request.created_at_time;
+            });
+            fee = DEFAULT_FEE;
+            timestamp = now;
+        };
+        log.add(tx);
+
+        #Ok(request.amount);
+    };
+
+    public shared({ caller }) func icrc2_transfer_from(request : TransferFromRequest) : async TransferFromResult {
+        switch (validateTransferFromRequest(request, caller)) {
+            case (#Err(err)) return #Err(err);
+            case (#Ok(_)) {};
+        };
+
+        let fromAccount = request.from;
+        let toAccount = request.to;
+        let amount : Tokens = request.amount;
+        let fee : Tokens = Option.get(request.fee, DEFAULT_FEE);
+
+        let allowanceKey = (fromAccount, caller);
+        let allowance = switch (allowancesMap.get(allowanceKey)) {
+            case (?allowance) allowance;
+            case (null) return #Err(#InsufficientAllowance { allowance = 0 });
+        };
+
+        if (allowance.amount < amount) {
+            return #Err(#InsufficientAllowance { allowance = allowance.amount });
+        };
+
+        // Check spender's balance for fee
+        let spenderAccount = { owner = caller; subaccount = switch (request.spender_subaccount) { case (?subaccount) ?Blob.fromArray(subaccount); case (null) null; } };
+        let spenderBalance = await icrc1_balance_of(spenderAccount);
+        if (spenderBalance < fee) {
+            return #Err(#InsufficientFunds { balance = spenderBalance });
+        };
+
+        // Check from account's balance for amount
+        let fromBalance = await icrc1_balance_of(fromAccount);
+
+        Debug.print("From Balance: " # Nat.toText(fromBalance));
+        Debug.print("From Principal: " # Principal.toText(fromAccount.owner));
+        
+        if (fromBalance < amount) {
+            return #Err(#InsufficientFunds { balance = fromBalance });
+        };
+
+        let transferArgs : Transfer = {
+            from = fromAccount;
+            to = toAccount;
+            amount = amount;
+            fee = ?fee;
+            memo = switch (request.memo) {
+                case (?memo) ?Blob.fromArray(memo);
+                case (null) null;
+            };
+            created_at_time = request.created_at_time;
+            source = #Icrc2TransferFrom;
+            spender = spenderAccount;
+        };
+
+        let transferResult = await applyTransfer(transferArgs);
+
+        switch (transferResult) {
+            case (#Ok(txIndex)) {
+                let newAllowance = {
+                    amount = allowance.amount - amount;
+                    expires_at = allowance.expires_at;
+                };
+                allowancesMap.put(allowanceKey, newAllowance);
+                #Ok(txIndex)
+            };
+            case (#Err(err)) #Err(err);
+        }
+    };
+
+    public query func icrc2_allowance(request : AllowanceRequest) : async Allowance {
+        let key = (request.account, request.spender);
+        switch (allowancesMap.get(key)) {
+            case (?allowance) allowance;
+            case (null) { { amount = 0; expires_at = null } };
+        }
     };
 }; 

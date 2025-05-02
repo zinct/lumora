@@ -40,24 +40,42 @@ export default function CommunityBalance() {
 
       setTransactions(transactionHistory);
 
-      const transformedTransactions = transactionHistory.map((tx) => {
-        if ("Transfer" in tx.operation) {
-          return tx.operation.Transfer;
-        } else if ("Mint" in tx.operation) {
-          return tx.operation.Mint;
-        } else if ("Burn" in tx.operation) {
-          return tx.operation.Burn;
-        } else if ("Approve" in tx.operation) {
-          return tx.operation.Approve;
-        }
-      });
-
-      // Update balance data
       setBalanceData({
         balance: convertE8sToToken(balance),
-        pendingRewards: 0,
-        totalEarned: transformedTransactions.filter((tx) => tx.to.owner.toText() === identity.getPrincipal().toText()).reduce((sum, tx) => sum + convertE8sToToken(tx.amount), 0),
-        totalSpent: transformedTransactions.filter((tx) => tx.from.owner.toText() === identity.getPrincipal().toText()).reduce((sum, tx) => sum + convertE8sToToken(tx.amount), 0),
+        totalEarned: transactionHistory
+          .filter((tx) => {
+            if ("Mint" in tx.operation) {
+              return tx.operation.Mint.to.owner.toText() === identity.getPrincipal().toText();
+            } else if ("Transfer" in tx.operation) {
+              return tx.operation.Transfer.to.owner.toText() === identity.getPrincipal().toText();
+            }
+            return false;
+          })
+          .reduce((sum, tx) => {
+            if ("Mint" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Mint.amount);
+            } else if ("Transfer" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Transfer.amount);
+            }
+            return sum;
+          }, 0),
+        totalSpent: transactionHistory
+          .filter((tx) => {
+            if ("Burn" in tx.operation) {
+              return tx.operation.Burn.from.owner.toText() === identity.getPrincipal().toText();
+            } else if ("Transfer" in tx.operation) {
+              return tx.operation.Transfer.from.owner.toText() === identity.getPrincipal().toText();
+            }
+            return false;
+          })
+          .reduce((sum, tx) => {
+            if ("Burn" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Burn.amount);
+            } else if ("Transfer" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Transfer.amount);
+            }
+            return sum;
+          }, 0),
       });
     } catch (error) {
       console.error("Error fetching balance data:", error);

@@ -12,7 +12,6 @@ import { useAuth } from "@/core/providers/auth-provider";
 import { useToast } from "@/core/hooks/use-toast";
 import { useNavigate } from "react-router";
 import { EmptyState } from "@/core/components/ui/empty-state";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 import { Award } from "lucide-react";
 
 export function ProjectManagement() {
@@ -124,8 +123,6 @@ export function ProjectManagement() {
         }
       }
 
-      console.log("projectData", { [projectData.category]: null });
-
       // Prepare project parameters
       const params = {
         title: projectData.title,
@@ -142,8 +139,6 @@ export function ProjectManagement() {
 
       // Call backend to create project
       const response = await backend.createProject(params);
-
-      console.log(response, "response");
 
       if ("Ok" in response) {
         toast({

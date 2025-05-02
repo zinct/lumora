@@ -1,3 +1,5 @@
+#!/bin/bash
+
 dfx identity new lumora
 dfx identity use lumora
 

@@ -1378,7 +1378,6 @@ actor Lumora {
         };
         return #Err("Project not found");
     };
-    
 
     public func adminGetAllUsers() : async ?[(Text, Text, Nat)] {
         let allUsers = Buffer.Buffer<(Text, Text, Nat)>(0);

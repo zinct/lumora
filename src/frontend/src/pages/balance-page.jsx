@@ -1,26 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/core/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import { Badge } from "@/core/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { TransactionHistory } from "@/core/components/balance/transaction-history";
-import { ArrowUpRight, ArrowDownRight, Clock, Download, Upload, Leaf, Calendar, ExternalLink, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/core/providers/auth-provider";
 import { token } from "declarations/token";
 import { convertE8sToToken } from "../core/lib/canisterUtils";
+import { Leaf } from "lucide-react";
 
 export default function BalancePage() {
-  const { user, identity, isAuthenticated } = useAuth();
+  const { identity, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [balanceData, setBalanceData] = useState(null);
-  const [currentBalance, setCurrentBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
-
-  const fetchCurrentBalance = async () => {
-    setCurrentBalance(balance);
-  };
 
   const fetchBalanceData = async () => {
     setIsLoading(true);
@@ -40,24 +33,42 @@ export default function BalancePage() {
 
       setTransactions(transactionHistory);
 
-      const transformedTransactions = transactionHistory.map((tx) => {
-        if ("Transfer" in tx.operation) {
-          return tx.operation.Transfer;
-        } else if ("Mint" in tx.operation) {
-          return tx.operation.Mint;
-        } else if ("Burn" in tx.operation) {
-          return tx.operation.Burn;
-        } else if ("Approve" in tx.operation) {
-          return tx.operation.Approve;
-        }
-      });
-
-      // Update balance data
       setBalanceData({
         balance: convertE8sToToken(balance),
-        pendingRewards: 0,
-        totalEarned: transformedTransactions.filter((tx) => tx.to.owner.toText() === identity.getPrincipal().toText()).reduce((sum, tx) => sum + convertE8sToToken(tx.amount), 0),
-        totalSpent: transformedTransactions.filter((tx) => tx.from.owner.toText() === identity.getPrincipal().toText()).reduce((sum, tx) => sum + convertE8sToToken(tx.amount), 0),
+        totalEarned: transactionHistory
+          .filter((tx) => {
+            if ("Mint" in tx.operation) {
+              return tx.operation.Mint.to.owner.toText() === identity.getPrincipal().toText();
+            } else if ("Transfer" in tx.operation) {
+              return tx.operation.Transfer.to.owner.toText() === identity.getPrincipal().toText();
+            }
+            return false;
+          })
+          .reduce((sum, tx) => {
+            if ("Mint" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Mint.amount);
+            } else if ("Transfer" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Transfer.amount);
+            }
+            return sum;
+          }, 0),
+        totalSpent: transactionHistory
+          .filter((tx) => {
+            if ("Burn" in tx.operation) {
+              return tx.operation.Burn.from.owner.toText() === identity.getPrincipal().toText();
+            } else if ("Transfer" in tx.operation) {
+              return tx.operation.Transfer.from.owner.toText() === identity.getPrincipal().toText();
+            }
+            return false;
+          })
+          .reduce((sum, tx) => {
+            if ("Burn" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Burn.amount);
+            } else if ("Transfer" in tx.operation) {
+              return sum + convertE8sToToken(tx.operation.Transfer.amount);
+            }
+            return sum;
+          }, 0),
       });
     } catch (error) {
       console.error("Error fetching balance data:", error);

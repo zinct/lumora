@@ -29,6 +29,8 @@ export function TransactionHistory({ transactions: initialTransactions, isCommun
       case "reward":
         return <Download className="h-10 w-10 p-2 text-emerald-500 bg-emerald-500/10 rounded-full" />;
       case "spend":
+        return <Upload className="h-10 w-10 p-2 text-red-500 bg-red-500/10 rounded-full" />;
+      case "approve":
         return <Upload className="h-10 w-10 p-2 text-amber-500 bg-amber-500/10 rounded-full" />;
       default:
         return <Clock className="h-10 w-10 p-2 text-muted-foreground bg-muted/50 rounded-full" />;
@@ -43,32 +45,32 @@ export function TransactionHistory({ transactions: initialTransactions, isCommun
       const { from, amount: txAmount, memo } = tx.operation.Transfer;
       title = "Token Transfer";
       subtitle = memo?.[0] ? new TextDecoder().decode(memo[0]) : "-";
-      isPositive = from.owner.toText() === identity.getPrincipal() ? false : true;
+      isPositive = from.owner.toText() == identity.getPrincipal() ? false : true;
       amount = convertE8sToToken(txAmount);
-    } else if ("Mint" in operation) {
-      const { from, amount: txAmount, memo } = tx.operation.Transfer;
+    } else if ("Mint" in tx.operation) {
+      const { from, amount: txAmount, memo } = tx.operation.Mint;
       title = "Mint Token";
       subtitle = memo?.[0] ? new TextDecoder().decode(memo[0]) : "-";
-      isPositive = from.owner.toText() === identity.getPrincipal() ? false : true;
+      isPositive = from.owner.toText() == identity.getPrincipal() ? false : true;
       amount = convertE8sToToken(txAmount);
-    } else if ("Burn" in operation) {
-      const { from, amount: txAmount, memo } = tx.operation.Transfer;
+    } else if ("Burn" in tx.operation) {
+      const { amount: txAmount, memo } = tx.operation.Burn;
       title = "Token Burn";
       subtitle = memo?.[0] ? new TextDecoder().decode(memo[0]) : "-";
-      isPositive = from.owner.toText() === identity.getPrincipal() ? false : true;
+      isPositive = false;
       amount = convertE8sToToken(txAmount);
-    } else if ("Approve" in operation) {
-      const { from, amount: txAmount, memo } = tx.operation.Transfer;
+    } else if ("Approve" in tx.operation) {
+      const { amount: txAmount, memo } = tx.operation.Approve;
       title = "Token Approval";
       subtitle = memo?.[0] ? new TextDecoder().decode(memo[0]) : "-";
-      isPositive = from.owner.toText() === identity.getPrincipal() ? true : false;
+      isPositive = null;
       amount = convertE8sToToken(txAmount);
     }
 
     if (isCommunity) {
       type = isPositive ? "topup" : "distribution";
     } else {
-      type = isPositive ? "reward" : "spend";
+      type = isPositive == null ? "approve" : isPositive ? "reward" : "spend";
     }
 
     return {
@@ -96,8 +98,8 @@ export function TransactionHistory({ transactions: initialTransactions, isCommun
               </div>
             </div>
             <div className="flex flex-col items-end ml-4">
-              <div className={`font-bold ${transaction.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                {transaction.isPositive ? "+" : "-"}
+              <div className={`font-bold ${transaction.isPositive == null ? "text-amber-500" : transaction.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                {transaction.isPositive == null ? "" : transaction.isPositive ? "+" : "-"}
                 {transaction.amount} LUM
               </div>
               <div className="mt-1">{getStatusBadge(transaction.status)}</div>

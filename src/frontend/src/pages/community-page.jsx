@@ -12,8 +12,6 @@ export default function CommunityDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  console.log("params", searchParams.get("tab"));
-
   // If not logged in or not an admin, show login prompt
   if (!isAdmin) {
     return <AdminGuard onLogin={() => openLoginModal("community", "/community/admin")} />;

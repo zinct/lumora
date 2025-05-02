@@ -1,29 +1,84 @@
+import { Coins, AlertTriangle, CheckCircle2, X, Star, Leaf, Zap, Crown } from "lucide-react";
 
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/core/components/ui/dialog";
+import { Button } from "@/core/components/ui/button";
+import { Badge } from "@/core/components/ui/badge";
+import { Progress } from "@/core/components/ui/progress";
+import { nft as nftCanister, canisterId as nftCanisterId } from "declarations/nft";
+import { token as tokenCanister } from "declarations/token";
+import { useState } from "react";
+import { Principal } from "@dfinity/principal";
+import { convertTokenToE8s } from "../../lib/canisterUtils";
 
-import { Coins, AlertTriangle, CheckCircle2, X } from "lucide-react"
+const getRarityIcon = (rarity) => {
+  switch (rarity?.toLowerCase()) {
+    case "legendary":
+      return <Crown className="h-3 w-3 mr-1 text-white" />;
+    case "epic":
+      return <Zap className="h-3 w-3 mr-1 text-white" />;
+    case "rare":
+      return <Star className="h-3 w-3 mr-1 text-white" />;
+    default:
+      return <Leaf className="h-3 w-3 mr-1 text-white" />;
+  }
+};
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/core/components/ui/dialog"
-import { Button } from "@/core/components/ui/button"
-import { Badge } from "@/core/components/ui/badge"
-import { Progress } from "@/core/components/ui/progress"
+const getRarityColor = (rarity) => {
+  switch (rarity) {
+    case "Common":
+      return "bg-slate-500";
+    case "Uncommon":
+      return "bg-green-500";
+    case "Rare":
+      return "bg-blue-500";
+    case "Epic":
+      return "bg-purple-500";
+    case "Legendary":
+      return "bg-amber-500";
+    default:
+      return "bg-slate-500";
+  }
+};
 
-export function NFTRedemptionModal({ nft, isOpen, onClose, onConfirm, userTokens }) {
-  // Get rarity color class
-  const getRarityColorClass = (rarity) => {
-    switch (rarity) {
-      case "Rare":
-        return "bg-purple-500/20 text-purple-500"
-      case "Uncommon":
-        return "bg-blue-500/20 text-blue-500"
-      default:
-        return "bg-green-500/20 text-green-500"
+export function NFTRedemptionModal({ nft, isOpen, onClose, userTokens, isRedeemed }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleRedeem() {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const nftPrincipal = Principal.fromText(nftCanisterId);
+
+      const approveParams = {
+        from_subaccount: [],
+        spender: nftPrincipal,
+        amount: BigInt(nft.tokenCost) * BigInt(10 ** 8), // Convert BigInt to Number
+        expires_at: [],
+        fee: [],
+        memo: [new TextEncoder().encode(`Approve for NFT #${parseInt(nft.tokenId)} redemption`)],
+        created_at_time: [],
+      };
+      const approveResult = await tokenCanister.icrc2_approve(approveParams);
+
+      if ("Err" in approveResult) {
+        throw new Error(`Failed to approve tokens: ${approveResult.Err}`);
+      }
+
+      // Then proceed with redemption
+      const result = await nftCanister.redeem(Number(nft.tokenId));
+
+      if ("Ok" in result) {
+        window.location.reload();
+      } else {
+        setError(result.Err);
+      }
+    } catch (error) {
+      console.error("Error in redemption process:", error);
+      setError(error.message || "An error occurred while redeeming the NFT. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -32,19 +87,17 @@ export function NFTRedemptionModal({ nft, isOpen, onClose, onConfirm, userTokens
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Confirm NFT Redemption</DialogTitle>
-          <DialogDescription>
-            You are about to redeem this NFT using your LUM tokens. This action cannot be undone.
-          </DialogDescription>
+          <DialogDescription>You are about to redeem this NFT using your LUM tokens. This action cannot be undone.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center py-4">
           <div className="relative w-40 h-40 mb-4 rounded-lg overflow-hidden">
             <img src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
-            <div className="absolute top-2 right-2">
-              <Badge variant="secondary" className={getRarityColorClass(nft.rarity)}>
-                {nft.rarity}
-              </Badge>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <Badge className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)}`}>
+              {getRarityIcon(nft.rarity)}
+              {nft.rarity}
+            </Badge>
           </div>
 
           <h3 className="text-lg font-semibold text-center mb-1">{nft.name}</h3>
@@ -90,16 +143,12 @@ export function NFTRedemptionModal({ nft, isOpen, onClose, onConfirm, userTokens
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button
-            onClick={onConfirm}
-            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
-            disabled={userTokens < nft.tokenCost}
-          >
+          <Button onClick={handleRedeem} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700" disabled={false || isLoading || isRedeemed}>
             <Coins className="h-4 w-4 mr-2" />
-            Confirm Redemption
+            {isLoading ? "Confirming..." : "Confirm Redemption"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

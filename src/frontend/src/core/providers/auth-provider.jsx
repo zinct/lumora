@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { AuthClient } from "@dfinity/auth-client";
 import { Actor } from "@dfinity/agent";
-import { useLocation, useNavigate } from "react-router";
 import { getInternetIdentityNetwork } from "@/core/lib/canisterUtils";
 import { backend } from "declarations/backend";
 import { LoginModal } from "@/core/components/login-modal";
 import RegisterModal from "@/core/components/auth/register-modal";
+import { nft } from "declarations/nft";
+import { token } from "declarations/token";
 
 const AuthContext = createContext();
 
@@ -55,6 +56,8 @@ export const AuthProvider = ({ children }) => {
         const newIdentity = client.getIdentity();
         setIdentity(newIdentity);
         Actor.agentOf(backend).replaceIdentity(newIdentity);
+        Actor.agentOf(nft).replaceIdentity(newIdentity);
+        Actor.agentOf(token).replaceIdentity(newIdentity);
         const userResponse = await backend.getProfile();
 
         setIsLoading(false);

@@ -2,7 +2,6 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 
 export function SubmissionStatus({ submission }) {
   const getStatusDisplay = () => {
-    console.log(JSON.stringify(submission.status));
     switch (JSON.stringify(submission.status)) {
       case `{"approved":null}`:
         return {
