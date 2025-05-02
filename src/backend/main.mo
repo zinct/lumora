@@ -14,7 +14,6 @@ import Nat8 "mo:base/Nat8";
 import Error "mo:base/Error";
 import StorageCanister "canister:storage";
 import TokenCanister "canister:token";
-import NFTCanister "canister:nft";
 
 actor Lumora {
     // ===== TYPE DEFINITIONS =====
@@ -122,7 +121,6 @@ actor Lumora {
     type RegisterParams = {
         name: Text;
         registerAs: Text;
-        initialToken: ?Nat;
     };
 
     // ===== STATE VARIABLES =====
@@ -184,37 +182,9 @@ actor Lumora {
                     id = caller;
                     name = params.name;
                 };
-
-                if (Option.get(params.initialToken, 0) > 0) {
-                    let userAccount = { owner = caller; subaccount = null };
-
-                let transferArgs = {
-                    from_subaccount = null;
-                    to = userAccount;
-                    amount = Option.get(params.initialToken, 0);
-                    fee = null;
-                    memo = null;
-                    created_at_time = null;
-                };
-
-                // set initial balance
-                let transferResult = await TokenCanister.icrc1_transfer(transferArgs);
                 
-
-                switch (transferResult) {
-                    case (#Ok(_)) {
-                            communityStore.put(caller, community);
-                            return #Ok("Successfully registered as community");
-                        };
-                        case (#Err(err)) {
-                            return #Err("Failed to transfer initial token: " # debug_show(err));
-                        };
-                    };
-                } else {
-                    communityStore.put(caller, community);
-                    return #Ok("Successfully registered as community");
-                };
-                
+                communityStore.put(caller, community);
+                return #Ok("Successfully registered as community");
             };
             case _ {
                 return #Err("Invalid role. Must be either 'participant' or 'community'");

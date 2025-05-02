@@ -1,4 +1,4 @@
-import { Menu, Leaf, Wallet, User, X, ChevronDown, Zap, Droplets, Recycle, TreePine, Coins, CoinsIcon, ConeIcon, ContactIcon } from "lucide-react";
+import { Menu, Leaf, Wallet, User, X, ChevronDown, Zap, Droplets, Recycle, TreePine, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/core/components/ui/sheet";
 import { Outlet, useNavigate } from "react-router";
 import { Button } from "@/core/components/ui/button";
@@ -16,7 +16,7 @@ export default function HomeLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${window.location.pathname === "/assistant" ? "bg-black" : ""}`}>
       <header className={`border-b border-white/10 ${window.location.pathname === "/" ? "fixed" : "sticky"} top-0 right-0 left-0 bg-black/40 backdrop-blur-3xl z-50`}>
         <div className="container flex items-center h-16 justify-between">
           <div className="flex items-center gap-8">
@@ -24,6 +24,24 @@ export default function HomeLayout() {
               <Leaf className="h-6 w-6" />
               Lumora
             </a>
+            <nav className="hidden md:flex items-center gap-6">
+              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+                Community
+              </a>
+              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+                Resources
+              </a>
+              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+                NFTs
+              </a>
+              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+                White Paper
+              </a>
+              <a href="#" onClick={() => navigate("/assistant")} className="text-sm font-medium flex items-center justify-center gap-1">
+                <Sparkles className="h-4 w-4 text-emerald-400 mr-1" />
+                Assistant
+              </a>
+            </nav>
           </div>
 
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -139,7 +157,7 @@ export default function HomeLayout() {
 
       <Outlet />
 
-      <footer className="bg-card border-t border-border/40 py-12">
+      <footer className={`${window.location.pathname === "/assistant" ? "bg-black" : "bg-card"} border-t border-border/40 py-12`}>
         <div className="container">
           <div className="flex flex-col items-center justify-center">
             <a href="/" className="flex items-center gap-2 font-bold text-left text-xl mb-4">

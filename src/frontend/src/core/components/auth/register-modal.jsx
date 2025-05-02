@@ -18,7 +18,6 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
   const [formData, setFormData] = useState({
     participantName: "",
     communityName: "",
-    initialToken: "",
   });
   const { identity } = useAuth();
   // Handle animation states
@@ -38,7 +37,6 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
         setFormData({
           participantName: "",
           communityName: "",
-          initialToken: "",
         });
       }, 300);
     }
@@ -60,7 +58,7 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
     let isValid = true;
     if (role === "participant" && !formData.participantName.trim()) {
       isValid = false;
-    } else if (role === "community" && (!formData.communityName.trim() || !formData.initialToken.trim())) {
+    } else if (role === "community" && !formData.communityName.trim()) {
       isValid = false;
     }
 
@@ -74,7 +72,6 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
     const registerResponse = await backend.register({
       name: role === "participant" ? formData.participantName : formData.communityName,
       registerAs: role,
-      initialToken: role === "community" ? [Number(formData.initialToken) * 100_000_000] : [],
     });
 
     if ("Ok" in registerResponse) {
@@ -148,12 +145,6 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
               <div className="space-y-2">
                 <Label htmlFor="communityName">Community Name</Label>
                 <Input id="communityName" name="communityName" placeholder="Enter community name" value={formData.communityName} onChange={handleInputChange} required />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="initialToken">Initial Token</Label>
-                <Input id="initialToken" name="initialToken" placeholder="Enter initial token" value={formData.initialToken} onChange={handleInputChange} required />
-                <p className="text-xs text-red-500">The initial token is for testing purposes only.</p>
               </div>
             </TabsContent>
           </Tabs>

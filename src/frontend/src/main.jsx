@@ -14,7 +14,7 @@ import BalancePage from "./pages/balance-page";
 import { AuthProvider } from "@/core/providers/auth-provider";
 import MyProjectsPage from "./pages/my-project-page";
 import ScrollToTop from "@/core/components/scroll-to-top";
-
+import AssistantPage from "./pages/assitant/assistant-page";
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
@@ -30,6 +30,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="/community" element={<CommunityDashboardPage />} />
             <Route path="/balance" element={<BalancePage />} />
             <Route path="/my-projects" element={<MyProjectsPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
           </Route>
         </Routes>
       </AuthProvider>
