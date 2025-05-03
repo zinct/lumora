@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Eye, Users, Calendar, Leaf, Ban, Clock, CalendarClock, HelpCircle } from "lucide-react";
+import { Plus, Search, Edit, Eye, Users, Calendar, Leaf, Ban, Clock, CalendarClock, HelpCircle, ArrowRight, ChevronRight, Trophy } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
@@ -296,6 +296,31 @@ export function ProjectManagement() {
         </Dialog>
       </div>
 
+      <div className="bg-card border rounded-lg p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <Trophy className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">Community Organizer Levels</h3>
+              <Badge variant="outline" className="text-xs">
+                Important
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your Community Level determines the maximum rewards you can offer and the fees you'll earn. Currently, you're at the <span className="font-medium text-amber-500">Bronze Level</span> with a maximum reward of 100 LUM per project.
+            </p>
+            <div className="flex items-center gap-2">
+              <a href="#" onClick={() => navigate("/?section=levels")}>
+                <Button variant="outline" size="sm" className="h-8">
+                  View Level System
+                  <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
@@ -306,7 +331,7 @@ export function ProjectManagement() {
         <CardContent className="p-0">
           {filteredProjects.length === 0 ? (
             <div className="p-8">
-              <EmptyState title="No Projects Found" description="There are no projects to display at the moment. Create a new project to get started." variant="projects" icon={Leaf} actionLabel="Create Project" onAction={() => setIsCreateDialogOpen(true)} />
+              <EmptyState title="No Projects Found" description="There are no projects to display at the moment. Create a new project to get started." variant="projects" icon={Leaf} />
             </div>
           ) : (
             <div className="rounded-md border">

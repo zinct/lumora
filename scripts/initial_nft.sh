@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dfx identity new lumora
+dfx identity new lumora --disable-encryption
 dfx identity use lumora
 
 # Create token with initial parameters

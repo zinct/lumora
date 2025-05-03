@@ -141,92 +141,36 @@ export default function CommunityBalance() {
           </Card>
         </div>
 
-        <Tabs defaultValue="transactions" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="swap">Token Swap</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="transactions" className="space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                  <CardTitle>Transaction History</CardTitle>
-                </div>
-                <CardDescription>View all community token transactions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {transactions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Transactions Yet</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm">There are no transactions to display at the moment. Transactions will appear here once they are made.</p>
-                  </div>
-                ) : (
-                  <TransactionHistory transactions={transactions} isCommunity={true} />
-                )}
-              </CardContent>
-              <CardFooter className="flex justify-between border-t pt-6">
-                <div className="text-sm text-muted-foreground">{transactions.length === 0 ? "No transactions" : `Showing ${transactions.length} transactions`}</div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" disabled>
-                    Previous
-                  </Button>
-                  <Button variant="outline" size="sm" disabled>
-                    Next
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="swap" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <TokenSwap />
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Swap History</CardTitle>
-                  <CardDescription>Recent token swap transactions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* <div className="space-y-4">
-                    {transactions
-                      .map((transaction) => (
-                        <div key={transaction.id} className="p-4 border rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="font-medium">Token Swap</div>
-                            <Badge className="bg-blue-500">Completed</Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground mb-3">
-                            {new Date(transaction.date).toLocaleDateString()} at {new Date(transaction.date).toLocaleTimeString()}
-                          </div>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span>From:</span>
-                            <span className="font-medium">
-                              {transaction.swapDetails.fromAmount} {transaction.swapDetails.fromToken}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span>To:</span>
-                            <span className="font-medium">{transaction.amount} LUM</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Rate:</span>
-                            <span className="font-medium">
-                              1 {transaction.swapDetails.fromToken} = {transaction.swapDetails.rate} LUM
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                  </div> */}
-                </CardContent>
-              </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle>Transaction History</CardTitle>
             </div>
-          </TabsContent>
-        </Tabs>
+            <CardDescription>View all community token transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {transactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Transactions Yet</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">There are no transactions to display at the moment. Transactions will appear here once they are made.</p>
+              </div>
+            ) : (
+              <TransactionHistory transactions={transactions} isCommunity={true} />
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-between border-t pt-6">
+            <div className="text-sm text-muted-foreground">{transactions.length === 0 ? "No transactions" : `Showing ${transactions.length} transactions`}</div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" disabled>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" disabled>
+                Next
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
       </main>
     </div>
   );

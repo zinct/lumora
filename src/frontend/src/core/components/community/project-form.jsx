@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from "react";
-import { Info, X, Crop } from "lucide-react";
+import { Info, X, Crop, Trophy, BadgeDollarSign, PercentCircle, Wallet } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
+import { Badge } from "@/core/components/ui/badge";
 import { Textarea } from "@/core/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/core/components/ui/tooltip";
@@ -10,6 +11,8 @@ import { useToast } from "@/core/hooks/use-toast";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/core/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from "@/core/components/ui/alert";
+import { Gift, ArrowRight } from "lucide-react";
 
 function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   return centerCrop(
@@ -185,6 +188,53 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4 pt-4 border-t">
+        <div className="flex items-start gap-3">
+          <Trophy className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="font-medium text-sm">Community Level Terms</h3>
+            <p className="text-xs text-muted-foreground mt-1">By creating this project, you agree to the following terms based on your Community Level:</p>
+          </div>
+        </div>
+
+        <div className="bg-muted/40 rounded-lg p-4 space-y-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Your Current Level:</span>
+              <Badge variant="outline" className="ml-auto text-amber-500 border-amber-500/20">
+                Bronze
+              </Badge>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <BadgeDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Maximum Reward:</span>
+              <span className="ml-auto font-medium">100 LUM</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <PercentCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Fee to Organizer:</span>
+              <span className="ml-auto font-medium">5%</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Required Holding:</span>
+              <span className="ml-auto font-medium">0-100 LUM</span>
+            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground space-y-2">
+            <p>
+              <span className="font-medium">Important:</span> The maximum reward you can offer is determined by your Community Level. To increase this limit, you need to hold more LUM tokens.
+            </p>
+            <p>Fees are automatically deducted from rewards when participants complete actions. You must maintain the minimum token holding requirement throughout the project duration.</p>
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
@@ -215,7 +265,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
             <Label htmlFor="image">Project Image (Optional)</Label>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <Input id="image" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="cursor-pointer" ref={fileInputRef} />
+                <Input id="image" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="cursor-pointer text-white [&::file-selector-button]:text-white" ref={fileInputRef} />
                 {imagePreview && (
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" size="icon" onClick={() => setIsEditing(true)} className="h-10 w-10">

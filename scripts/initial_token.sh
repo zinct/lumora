@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dfx identity new lumora
+dfx identity new lumora --disable-encryption
 dfx identity use lumora
 
 BACKEND_CANISTER_ID=$(dfx canister id backend)
