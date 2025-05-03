@@ -16,7 +16,6 @@
     "src/frontend"
   ],
   "dependencies": {
-    "@radix-ui/react-switch": "^1.2.2",
-    "react-image-crop": "^11.0.10"
+    "wasm-opt": "^1.4.0"
   }
 }

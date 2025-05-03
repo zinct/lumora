@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/backend/face_recognition"
+]
+resolver = "2"
