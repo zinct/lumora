@@ -54,23 +54,24 @@ export function ProjectManagement() {
       setIsLoading(true);
       const response = await backend.getCommunityProjects();
       if (response.Ok) {
-        setProjects(
-          response.Ok.map((project) => ({
-            id: project.id,
-            title: project.title,
-            description: project.description,
-            category: project.category,
-            startDate: new Date(Number(project.startDate) / 1000000),
-            expiredAt: new Date(Number(project.expiredAt) / 1000000),
-            participants: project.participants.length,
-            reward: Number(project.reward),
-            status: Number(project.status),
-            maxParticipants: Number(project.maxParticipants),
-            address: project.address,
-            impact: project.impact,
-            evidence: project.evidence,
-          }))
-        );
+        // Sort projects by createdAt in descending order (latest first)
+        const sortedProjects = response.Ok.map((project) => ({
+          id: project.id,
+          title: project.title,
+          description: project.description,
+          category: project.category,
+          startDate: new Date(Number(project.startDate) / 1000000),
+          expiredAt: new Date(Number(project.expiredAt) / 1000000),
+          participants: project.participants.length,
+          reward: Number(project.reward),
+          status: Number(project.status),
+          maxParticipants: Number(project.maxParticipants),
+          address: project.address,
+          impact: project.impact,
+          evidence: project.evidence,
+          createdAt: Number(project.createdAt),
+        })).sort((a, b) => b.createdAt - a.createdAt);
+        setProjects(sortedProjects);
       } else {
         toast.error(response.Err || "Failed to fetch projects");
       }

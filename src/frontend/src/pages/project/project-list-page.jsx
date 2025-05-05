@@ -38,8 +38,10 @@ export default function ProjectsPage() {
         setLoading(true);
         const result = await backend.getProjects();
         if ("Ok" in result) {
-          setProjects(result.Ok);
-          setFilteredProjects(result.Ok); // Initialize filtered projects
+          // Sort projects by createdAt in descending order (latest first)
+          const sortedProjects = result.Ok.sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
+          setProjects(sortedProjects);
+          setFilteredProjects(sortedProjects); // Initialize filtered projects with sorted data
         } else {
           setError(result.Err);
         }

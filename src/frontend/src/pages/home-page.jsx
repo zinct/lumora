@@ -112,7 +112,9 @@ export default function Home() {
         const result = await backend.getProjects();
         if ("Ok" in result) {
           // Sort projects by createdAt in descending order and take the latest 4
-          const sortedProjects = result.Ok.sort((a, b) => Number(b.createdAt) - Number(a.createdAt)).slice(0, 4);
+          const sortedProjects = result.Ok.sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+            .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+            .slice(0, 4);
           setProjects(sortedProjects);
         } else {
           setError(result.Err);
@@ -359,7 +361,7 @@ export default function Home() {
               </Card>
             </motion.div>
 
-            <motion.div variants={cardVariants} initial="initial" whileHover="hover" className="cursor-pointer" onClick={() => navigate("/resources")}>
+            <motion.div variants={cardVariants} initial="initial" whileHover="hover" className="cursor-pointer" onClick={() => navigate("/resources#community")}>
               <Card className="bg-card border-border/40 overflow-hidden hover:shadow-lg transition-all duration-300">
                 <div className="relative aspect-video overflow-hidden">
                   <motion.img src="/images/white-paper.png" alt="ICP Wallet" variants={imageVariants} className="object-cover w-full h-full" />

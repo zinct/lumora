@@ -181,6 +181,7 @@ export default function NFTsPage() {
                   tokenId={tokenId}
                   metadata={metadata}
                   price={price}
+                  role={user?.role}
                   canRedeem={user?.role === "participant"}
                   userTokens={user?.balance}
                   onRedeemClick={handleRedeemClick}

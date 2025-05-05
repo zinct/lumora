@@ -69,7 +69,7 @@ const getRarityColor = (rarity) => {
   }
 };
 
-export function NFTCard({ tokenId, metadata, price, canRedeem, userTokens, onRedeemClick, onClick, isRedeemed }) {
+export function NFTCard({ tokenId, metadata, price, canRedeem, userTokens, onRedeemClick, onClick, isRedeemed, role = "participant" }) {
   const rarity = metadata.attributes.find((attr) => attr.trait_type === "Rarity")?.value || "Common";
 
   return (
@@ -117,7 +117,7 @@ export function NFTCard({ tokenId, metadata, price, canRedeem, userTokens, onRed
                 </Button>
               ) : (
                 <Button size="sm" variant="outline" disabled onClick={(e) => e.stopPropagation()}>
-                  Login to Redeem
+                  {role === "participant" ? "Login to Redeem" : "Participant Only"}
                 </Button>
               )}
             </div>

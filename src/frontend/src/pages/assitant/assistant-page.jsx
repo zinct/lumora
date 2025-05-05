@@ -1,28 +1,51 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowUp, Leaf, Loader2, Bot } from "lucide-react";
+import { ArrowUp, Leaf, Loader2, Bot, Trash2 } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Avatar } from "@/core/components/ui/avatar";
 import { Card } from "@/core/components/ui/card";
 import { chatbot } from "declarations/chatbot";
+import { toast } from "react-toastify";
 
 // Suggested questions for the user
 const suggestedQuestions = [
   { text: "How do LUM tokens work?", query: "How do LUM tokens work?" },
   { text: "What eco-friendly actions can I take?", query: "What eco-friendly actions can I take?" },
-  { text: "How do I set up my wallet?", query: "How do I set up my wallet?" },
   { text: "How are actions verified?", query: "How are actions verified?" },
   { text: "What rewards can I earn?", query: "What rewards can I earn?" },
   { text: "Tell me about impact projects", query: "Tell me about impact projects" },
   { text: "How does the community work?", query: "How does the community work?" },
 ];
 
+const CHAT_HISTORY_KEY = "lumora_chat_history";
+
 const AssistantPage = () => {
-  const [messages, setMessages] = useState([{ role: "assistant", content: "I'm Lumora Assistant, your guide to sustainable actions and rewards. How can I help you today?", timestamp: new Date() }]);
+  const [messages, setMessages] = useState(() => {
+    // Load chat history from localStorage on initial render
+    const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (savedHistory) {
+      try {
+        const parsedHistory = JSON.parse(savedHistory);
+        return parsedHistory.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+      } catch (error) {
+        console.error("Error parsing chat history:", error);
+        return [{ role: "assistant", content: "I'm Lumora Assistant, your guide to sustainable actions and rewards. How can I help you today?", timestamp: new Date() }];
+      }
+    }
+    return [{ role: "assistant", content: "I'm Lumora Assistant, your guide to sustainable actions and rewards. How can I help you today?", timestamp: new Date() }];
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -33,6 +56,13 @@ const AssistantPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleClearHistory = () => {
+    const initialMessage = { role: "assistant", content: "I'm Lumora Assistant, your guide to sustainable actions and rewards. How can I help you today?", timestamp: new Date() };
+    setMessages([initialMessage]);
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
+    toast.success("Chat history cleared");
+  };
 
   const handleSendMessage = async (text = input) => {
     if (!text.trim()) return;
@@ -77,14 +107,20 @@ const AssistantPage = () => {
     <main className="flex-1 flex flex-col md:flex-row container mt-10 mb-24 gap-4">
       {/* Main chat area */}
       <div className="flex-1 flex flex-col h-[calc(100vh-10rem)] bg-card rounded-lg border border-border/40">
-        <div className="p-4 border-b border-white/20 bg-card flex">
-          <Avatar className="h-10 w-10 mr-3 bg-emerald-100 items-center justify-center">
-            <Leaf className="h-5 w-5 text-emerald-600" />
-          </Avatar>
-          <div>
-            <h2 className="font-medium">Lumora Assistant</h2>
-            <p className="text-sm text-muted-foreground">Ask anything about Lumora</p>
+        <div className="p-4 border-b border-white/20 bg-card flex justify-between items-center">
+          <div className="flex items-center">
+            <Avatar className="h-10 w-10 mr-3 items-center justify-center">
+              <Leaf className="h-5 w-5 text-emerald-600" />
+            </Avatar>
+            <div>
+              <h2 className="font-medium">Lumora Assistant</h2>
+              <p className="text-sm text-muted-foreground">Ask anything about Lumora</p>
+            </div>
           </div>
+          <Button variant="ghost" size="sm" onClick={handleClearHistory} className="text-muted-foreground hover:text-foreground">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear History
+          </Button>
         </div>
 
         {/* Messages container */}
@@ -128,7 +164,7 @@ const AssistantPage = () => {
               handleSendMessage();
             }}
             className="flex gap-2">
-            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about sustainability actions, tokens, or projects..." className="flex-1" disabled={isLoading} />
+            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about Lumora, sustainability actions, tokens, or projects..." className="flex-1" disabled={isLoading} />
             <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="bg-emerald-600 hover:bg-emerald-700">
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
             </Button>
