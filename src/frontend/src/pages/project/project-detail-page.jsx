@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/t
 import { Avatar, AvatarImage } from "@/core/components/ui/avatar";
 import { SubmitEvidenceForm } from "@/core/components/community/submit-evidence-form";
 import { SubmissionStatus } from "@/core/components/community/submission-status";
-import { useToast } from "@/core/hooks/use-toast";
+import { toast } from "react-toastify";
 import { ArrowLeft, Calendar, FileText, Leaf, MapPin, Share2, Users, Award, Ban, CalendarClock, Clock, HelpCircle, XCircle, CheckCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { backend } from "declarations/backend";
@@ -17,7 +17,6 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [tab, setTab] = useState("overview");
-  const { toast } = useToast();
   const { user, isAuthenticated, login, identity } = useAuth();
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,20 +76,11 @@ export default function ProjectDetailPage() {
           setHasJoined(hasJoinedProject);
         }
       } else {
-        toast({
-          title: "Error",
-          description: response.Err,
-          variant: "destructive",
-        });
+        toast.error(response.Err);
         navigate("/projects");
       }
     } catch (error) {
       console.error("Error fetching project:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch project details",
-        variant: "destructive",
-      });
       navigate("/projects");
     } finally {
       setIsLoading(false);
@@ -99,7 +89,7 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     fetchProject();
-  }, [id, isAuthenticated, user, navigate, toast]);
+  }, [id, isAuthenticated, user, navigate]);
 
   const getStatusConfig = (status) => {
     status = parseInt(status);
@@ -161,11 +151,7 @@ export default function ProjectDetailPage() {
       setIsSubmittingEvidence(true);
 
       if (!identity) {
-        toast({
-          title: "Error",
-          description: "Please login first",
-          variant: "destructive",
-        });
+        toast.error("Please login first");
         return;
       }
 
@@ -180,21 +166,13 @@ export default function ProjectDetailPage() {
           imageBlobs.push(uint8Array);
         } catch (fileError) {
           console.error("Error processing file:", fileError);
-          toast({
-            title: "Error",
-            description: `Failed to process file ${file.name}: ${fileError.message}`,
-            variant: "destructive",
-          });
+          toast.error(`Failed to process file ${file.name}: ${fileError.message}`);
           continue;
         }
       }
 
       if (imageBlobs.length === 0) {
-        toast({
-          title: "Error",
-          description: "No valid files were processed",
-          variant: "destructive",
-        });
+        toast.error("No valid files were processed");
         return;
       }
 
@@ -206,27 +184,15 @@ export default function ProjectDetailPage() {
       });
 
       if ("Ok" in response) {
-        // Refresh project data to get updated evidence
-        fetchProject();
+        toast.success("Your evidence has been submitted successfully and is pending review.");
 
-        toast({
-          title: "Success",
-          description: "Evidence submitted successfully",
-        });
+        fetchProject();
       } else {
-        toast({
-          title: "Error",
-          description: response.Err,
-          variant: "destructive",
-        });
+        toast.error(response.Err);
       }
     } catch (error) {
       console.error("Error submitting evidence:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit evidence",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to submit evidence");
     } finally {
       setIsSubmittingEvidence(false);
     }
@@ -246,24 +212,13 @@ export default function ProjectDetailPage() {
 
       if ("Ok" in response) {
         setHasJoined(true);
-        toast({
-          title: "Success",
-          description: "You have successfully joined the project",
-        });
+        toast.success("You have successfully joined the project");
       } else {
-        toast({
-          title: "Error",
-          description: response.Err,
-          variant: "destructive",
-        });
+        toast.error(response.Err);
       }
     } catch (error) {
       console.error("Error joining project:", error);
-      toast({
-        title: "Error",
-        description: "Failed to join project",
-        variant: "destructive",
-      });
+      toast.error("Failed to join project");
     }
   };
 
@@ -383,10 +338,7 @@ export default function ProjectDetailPage() {
                         .catch((error) => console.log("Error sharing:", error));
                     } else {
                       navigator.clipboard.writeText(window.location.href);
-                      toast({
-                        title: "Link copied",
-                        description: "Project link has been copied to clipboard",
-                      });
+                      toast.success("Project link has been copied to clipboard");
                     }
                   }}>
                   <Share2 className="h-4 w-4 mr-2" />

@@ -6,17 +6,17 @@
       "type": "motoko"
     },
     "token": {
-      "main": "src/backend/token/token.mo",
+      "main": "src/token/token.mo",
       "type": "motoko"
     },
     "nft": {
       "dependencies": ["token"],
-      "main": "src/backend/NFT/NFT.mo",
+      "main": "src/NFT/NFT.mo",
       "type": "motoko"
     },
     "chatbot": {
       "dependencies": ["llm"],
-      "main": "src/backend/chatbot/chatbot.mo",
+      "main": "src/chatbot/chatbot.mo",
       "type": "motoko"
     },
     "llm": {

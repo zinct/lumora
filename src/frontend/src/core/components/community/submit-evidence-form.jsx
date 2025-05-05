@@ -4,10 +4,9 @@ import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
 import { Textarea } from "@/core/components/ui/textarea";
-import { useToast } from "@/core/hooks/use-toast";
+import { toast } from "react-toastify";
 
 export function SubmitEvidenceForm({ onSubmit }) {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState([]);
@@ -15,25 +14,26 @@ export function SubmitEvidenceForm({ onSubmit }) {
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
 
-    // Check file size (5MB limit per file)
-    const oversizedFiles = selectedFiles.filter((file) => file.size > 5 * 1024 * 1024);
-    if (oversizedFiles.length > 0) {
-      toast({
-        title: "File too large",
-        description: `Some files exceed the 5MB size limit: ${oversizedFiles.map((f) => f.name).join(", ")}`,
-        variant: "destructive",
-      });
+    // Check if adding new files would exceed the 2 file limit
+    if (files.length + selectedFiles.length > 2) {
+      toast.error("You can only upload a maximum of 2 files.");
       return;
     }
 
-    // Add files to the list
-    const newFiles = selectedFiles.map((file) => ({
-      file,
-      name: file.name,
-      type: file.type.startsWith("image/") ? "image" : "document",
-      size: formatFileSize(file.size),
-      preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-    }));
+    // Check file size (2MB limit per file)
+    const oversizedFiles = selectedFiles.filter((file) => file.size > 2 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error(`Some files exceed the 2MB size limit: ${oversizedFiles.map((f) => f.name).join(", ")}`);
+      return;
+    }
+
+    // Validate file types
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
+    const invalidFiles = selectedFiles.filter((file) => !allowedTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      toast.error(`Invalid file type(s): ${invalidFiles.map((f) => f.name).join(", ")}. Only PNG, JPG, and JPEG files are allowed.`);
+      return;
+    }
 
     setFiles([...files, ...selectedFiles]);
   };
@@ -57,11 +57,7 @@ export function SubmitEvidenceForm({ onSubmit }) {
     e.preventDefault();
 
     if (description.trim() === "" && files.length === 0) {
-      toast({
-        title: "Submission incomplete",
-        description: "Please provide a description or upload files as evidence.",
-        variant: "destructive",
-      });
+      toast.error("Please provide a description or upload files as evidence.");
       return;
     }
 
@@ -73,21 +69,12 @@ export function SubmitEvidenceForm({ onSubmit }) {
         files,
       });
 
-      toast({
-        title: "Evidence submitted",
-        description: "Your evidence has been submitted successfully and is pending review.",
-      });
-
       // Clean up file previews
       files.forEach((file) => {
         if (file.preview) URL.revokeObjectURL(file.preview);
       });
     } catch (error) {
-      toast({
-        title: "Submission failed",
-        description: "There was an error submitting your evidence. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("There was an error submitting your evidence. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -128,12 +115,12 @@ export function SubmitEvidenceForm({ onSubmit }) {
         )}
 
         <div className="border-2 border-dashed rounded-lg p-4 text-center">
-          <Input id="evidence-files" type="file" multiple className="hidden" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt,.csv" />
+          <Input id="evidence-files" type="file" multiple className="hidden" onChange={handleFileChange} accept="image/png,image/jpeg,image/jpg" disabled={files.length >= 2} />
           <div className="py-4">
             <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground mb-1">Drag and drop files, or click to browse</p>
-            <p className="text-xs text-muted-foreground mb-4">Supports images, PDFs, documents, and text files (max 5MB each)</p>
-            <Button type="button" variant="outline" onClick={() => document.getElementById("evidence-files").click()}>
+            <p className="text-xs text-muted-foreground mb-4">Supports PNG, JPG, and JPEG files (max 2MB each, max 2 files)</p>
+            <Button type="button" variant="outline" onClick={() => document.getElementById("evidence-files").click()} disabled={files.length >= 2}>
               <Plus className="h-4 w-4 mr-2" />
               Add Files
             </Button>

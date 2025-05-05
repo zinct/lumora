@@ -6,6 +6,9 @@ import { useAuth } from "@/core/providers/auth-provider";
 import { UserProfileHeader } from "../user-profile";
 import { useState } from "react";
 import { convertE8sToToken } from "@/core/lib/canisterUtils";
+
+const whitePaperUrl = "https://www.notion.so/Lumora-White-Paper-1eaa9c3ab182805bab79cbae7fe8ad7c?showMoveTo=true&saveParent=true";
+
 export default function HomeLayout() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, login, user } = useAuth();
@@ -25,19 +28,19 @@ export default function HomeLayout() {
               Lumora
             </a>
             <nav className="hidden md:flex items-center gap-6">
-              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
-                Community
+              <a href="javascript:void(0)" onClick={() => navigate("/projects")} className="text-sm text-white/90 font-medium flex items-center justify-center">
+                Projects
               </a>
-              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+              <a href="javascript:void(0)" onClick={() => navigate("/resources")} className="text-sm text-white/90 font-medium flex items-center justify-center">
                 Resources
               </a>
-              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+              <a href="javascript:void(0)" onClick={() => navigate("/nfts")} className="text-sm text-white/90 font-medium flex items-center justify-center">
                 NFTs
               </a>
-              <a href="#" className="text-sm text-white/90 font-medium flex items-center justify-center">
+              <a href={whitePaperUrl} target="_blank" className="text-sm text-white/90 font-medium flex items-center justify-center">
                 White Paper
               </a>
-              <a href="#" onClick={() => navigate("/assistant")} className="text-sm font-medium flex items-center justify-center gap-1">
+              <a href="javascript:void(0)" onClick={() => navigate("/assistant")} className="text-sm font-medium flex items-center justify-center gap-1">
                 <Sparkles className="h-4 w-4 text-emerald-400 mr-1" />
                 Assistant
               </a>
@@ -157,17 +160,11 @@ export default function HomeLayout() {
 
       <Outlet />
 
-      <footer className={`${window.location.pathname === "/assistant" ? "bg-black" : "bg-card"} border-t border-border/40 py-12`}>
+      <footer className={`${window.location.pathname === "/assistant" ? "bg-black" : "bg-card"} border-t border-border/40 py-6`}>
         <div className="container">
-          <div className="flex flex-col items-center justify-center">
-            <a href="/" className="flex items-center gap-2 font-bold text-left text-xl mb-4">
-              <Leaf className="h-6 w-6 text-emerald-500" />
-              Lumora
-            </a>
-            <p className="text-muted-foreground mb-6 text-left max-w-lg">A decentralized, community-driven platform that incentivizes real-world eco-friendly actions through token rewards on the Internet Computer Protocol.</p>
-            <div className="text-center text-muted-foreground">
-              <p>© {new Date().getFullYear()} Lumora. All rights reserved.</p>
-            </div>
+          <div className="flex items-center justify-center gap-2">
+            <Leaf className="h-5 w-5 text-emerald-500" />
+            <span className="text-muted-foreground">© {new Date().getFullYear()} Lumora</span>
           </div>
         </div>
       </footer>

@@ -187,5 +187,5 @@ done
 echo "Successfully generated dummy projects!"
 
 # Switch back to default identity
-echo "Switching back to default identity..."
-dfx identity use default
+echo "Switching back to lumora identity..."
+dfx identity use lumora

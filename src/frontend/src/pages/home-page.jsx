@@ -13,9 +13,8 @@ import { EmptyState } from "../core/components/ui/empty-state";
 import { Badge } from "@/core/components/ui/badge";
 import { Progress } from "@/core/components/ui/progress";
 import { Separator } from "@/core/components/ui/seperator";
-
-// Import the backend canister
 import { backend } from "declarations/backend";
+import { toast } from "react-toastify";
 
 const levels = [
   {
@@ -119,6 +118,7 @@ export default function Home() {
           setError(result.Err);
         }
       } catch (err) {
+        toast.error(err.message);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -244,8 +244,8 @@ export default function Home() {
                 <EmptyState variant="projects" title="No projects yet" description="No projects to display at the moment." />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {projects.map((project) => (
-                    <motion.div key={project.id} variants={cardVariants} initial="initial" whileHover="hover" className="cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                  {projects.map((project, index) => (
+                    <motion.div key={index} variants={cardVariants} initial="initial" whileHover="hover" className="cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
                       <ProjectCard project={project} />
                     </motion.div>
                   ))}
@@ -367,10 +367,10 @@ export default function Home() {
                 </div>
                 <motion.div variants={contentVariants}>
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-medium mb-2">Set up your ICP wallet</h3>
-                    <p className="text-muted-foreground mb-4">Connect your Internet Computer wallet to start earning and using Lumora tokens.</p>
+                    <h3 className="text-xl font-medium mb-2">How Communities Work in Lumora</h3>
+                    <p className="text-muted-foreground mb-4">Learn how to create and manage a thriving community as an organizer on the Lumora platform.</p>
                     <Button variant="outline" className="border-emerald-600 text-emerald-500">
-                      Connect Wallet
+                      Learn More
                     </Button>
                   </CardContent>
                 </motion.div>
@@ -378,274 +378,6 @@ export default function Home() {
             </motion.div>
           </div>
         </div>
-      </section>
-
-      {/* Level */}
-      <section className="py-12 border-t container">
-        <div className="flex flex-col gap-2 mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Community Organizer Levels</h1>
-          <p className="text-muted-foreground max-w-[800px]">Unlock greater rewards and benefits as you level up your community organizer status by holding more LUM tokens.</p>
-        </div>
-        <Tabs defaultValue="overview" className="space-y-8">
-          <div className="flex justify-between items-center">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="calculator">Level Calculator</TabsTrigger>
-              <TabsTrigger value="faq">FAQ</TabsTrigger>
-            </TabsList>
-
-            <a href="#" onClick={() => navigate("/assistant")}>
-              <Button variant="outline" className="gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                <span>Get Help</span>
-              </Button>
-            </a>
-          </div>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {levels.map((level) => (
-                <Card key={level.value} className={`border ${level.borderColor} overflow-hidden`}>
-                  <CardHeader className={`${level.color} text-white pb-4`}>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="flex items-center gap-2">
-                        <Trophy className="h-5 w-5" />
-                        {level.name}
-                      </CardTitle>
-                      <Badge variant="outline" className="bg-background/20 text-white border-white">
-                        Level {levels.findIndex((l) => l.value === level.value) + 1}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-white">Organizer tier</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-white" />
-                          <span className="text-white">Holding Requirement</span>
-                        </div>
-                        <span className={`font-medium text-white`}>{level.holdingRequirement}</span>
-                      </div>
-
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <BadgeDollarSign className="h-4 w-4 text-white" />
-                          <span className="text-white">Maximum Reward</span>
-                        </div>
-                        <span className={`font-medium text-white`}>{level.maxReward}</span>
-                      </div>
-
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <PercentCircle className="h-4 w-4 text-white" />
-                          <span className="text-white">Fee to Organizer</span>
-                        </div>
-                        <span className={`font-medium text-white`}>{level.fee}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="bg-card border rounded-lg p-6 space-y-6">
-              <div className="flex flex-col gap-2">
-                <h2 className="text-xl font-semibold">How the Level System Works</h2>
-                <p className="text-muted-foreground">As a community organizer, your level is determined by the amount of LUM tokens you hold in your wallet. Higher levels unlock greater rewards and benefits, but also come with increased responsibilities.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">1. Hold LUM Tokens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">Maintain the required amount of LUM tokens in your wallet to qualify for each level. Your level is automatically updated based on your holdings.</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">2. Create Projects / Challenges</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">Design and launch sustainability challenges with rewards up to your level's maximum. Higher levels allow for more complex and rewarding initiatives.</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">3. Earn Fees</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">Receive a percentage of all rewards distributed through your challenges. Higher levels earn larger percentages, incentivizing growth.</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Calculator Tab */}
-          <TabsContent value="calculator" className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Level Calculator</CardTitle>
-                <CardDescription>See your current level and what you need to reach the next tier</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="level-select" className="text-sm font-medium">
-                      Select your current community account level
-                    </label>
-                    <select id="level-select" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={userLevel} onChange={(e) => setUserLevel(e.target.value)}>
-                      {levels.map((level) => (
-                        <option key={level.value} value={level.value}>
-                          {level.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="lum-holding" className="text-sm font-medium">
-                      Your current LUM holdings
-                    </label>
-                    <input id="lum-holding" type="number" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={lumHolding} placeholder="0" onChange={(e) => setLumHolding(Number.parseInt(e.target.value))} min="0" max="5000" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress to next level</span>
-                    <span>{getProgressPercentage().toFixed(0)}%</span>
-                  </div>
-                  <Progress value={getProgressPercentage()} className="h-2" />
-                </div>
-
-                <div className="rounded-lg border bg-card p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <Trophy className={`h-5 w-5 ${levels.find((l) => l.value === userLevel)?.textColor}`} />
-                        <span className="font-medium">Current Level: {levels.find((l) => l.value === userLevel)?.name}</span>
-                      </div>
-                      <Badge variant="outline" className={`${levels.find((l) => l.value === userLevel)?.textColor}`}>
-                        {levels.find((l) => l.value === userLevel)?.holdingRequirement}
-                      </Badge>
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Maximum reward per challenge</span>
-                        <span className="font-medium">{levels.find((l) => l.value === userLevel)?.maxReward}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Fee earned on rewards</span>
-                        <span className="font-medium">{levels.find((l) => l.value === userLevel)?.fee}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">LUM needed for next level</span>
-                        <span className="font-medium">{typeof getNextLevelRequirement() === "number" ? `${getNextLevelRequirement()} LUM` : getNextLevelRequirement()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Earnings Potential</CardTitle>
-                <CardDescription>Estimate your potential earnings as a community organizer</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Monthly Challenges</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold">5</div>
-                        <p className="text-sm text-muted-foreground">Average for your level</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Completion Rate</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold">75%</div>
-                        <p className="text-sm text-muted-foreground">Average for your level</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Potential Earnings</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold text-emerald-500">{((Number.parseInt(levels.find((l) => l.value === userLevel)?.maxReward) * 5 * 0.75 * Number.parseInt(levels.find((l) => l.value === userLevel)?.fee)) / 100).toFixed(0)} LUM</div>
-                        <p className="text-sm text-muted-foreground">Monthly estimate</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="bg-muted/50 rounded-lg p-4 flex items-start gap-3">
-                    <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-muted-foreground">Earnings are estimated based on average challenge completion rates and reward distributions. Actual earnings may vary based on challenge design, participant engagement, and other factors.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* FAQ Tab */}
-          <TabsContent value="faq" className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Frequently Asked Questions</CardTitle>
-                <CardDescription>Common questions about the community organizer level system</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  {[
-                    {
-                      question: "How is my organizer level determined?",
-                      answer: "Your level is determined by the amount of LUM tokens you hold in your account. The system automatically checks your balance and assigns the appropriate level.",
-                    },
-                    {
-                      question: "How are organizer fees calculated and distributed?",
-                      answer: "Organizer fees are calculated as a percentage of the rewards distributed to participants who complete your projects. Fees are automatically transferred to your wallet when rewards are distributed.",
-                    },
-                    {
-                      question: "Can I create projects with rewards higher than my level's maximum?",
-                      answer: "No, the maximum reward per challenge is limited by your current level. To create projects with higher rewards, you'll need to increase your LUM holdings to reach the next level.",
-                    },
-                    {
-                      question: "How often are levels updated?",
-                      answer: "Your level is updated in real-time based on your LUM holdings. As soon as you acquire enough tokens to reach the next level, your benefits and capabilities will be upgraded automatically.",
-                    },
-                  ].map((faq, i) => (
-                    <div key={i} className="space-y-2">
-                      <h3 className="font-medium flex items-center gap-2">
-                        <HelpCircle className="h-4 w-4 text-emerald-500" />
-                        {faq.question}
-                      </h3>
-                      <p className="text-sm text-muted-foreground pl-6">{faq.answer}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </section>
     </main>
   );

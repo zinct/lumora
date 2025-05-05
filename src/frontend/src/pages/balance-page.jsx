@@ -7,6 +7,7 @@ import { useAuth } from "@/core/providers/auth-provider";
 import { token } from "declarations/token";
 import { convertE8sToToken } from "../core/lib/canisterUtils";
 import { Leaf } from "lucide-react";
+import { toast } from "react-toastify";
 
 export default function BalancePage() {
   const { identity, isAuthenticated } = useAuth();
@@ -19,7 +20,6 @@ export default function BalancePage() {
     setIsLoading(true);
 
     try {
-      // Run balance and transaction history fetch in parallel
       const [balance, transactionHistory] = await Promise.all([
         token.icrc1_balance_of({
           owner: identity.getPrincipal(),
@@ -72,6 +72,7 @@ export default function BalancePage() {
       });
     } catch (error) {
       console.error("Error fetching balance data:", error);
+      toast.error(error.message || "Failed to fetch balance data. Please try again.");
     } finally {
       setIsLoading(false);
     }

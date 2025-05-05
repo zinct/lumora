@@ -1,14 +1,12 @@
-
-
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card"
-import { BookOpen, Lightbulb, Users, Leaf, Award } from "lucide-react"
-import PlatformAnimation from "@/core/components/resources/animations/platform-animation"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
+import { BookOpen, Lightbulb, Users, Leaf, Award } from "lucide-react";
+import PlatformAnimation from "@/core/components/resources/animations/platform-animation";
 
 export default function LearnBasics() {
-  const [activeTab, setActiveTab] = useState("what-is-lumora")
+  const [activeTab, setActiveTab] = useState("what-is-lumora");
 
   return (
     <div>
@@ -17,9 +15,7 @@ export default function LearnBasics() {
           <BookOpen className="h-8 w-8 mr-3 text-primary" />
           <h2 className="text-3xl font-bold">Learn the Basics of Lumora</h2>
         </div>
-        <p className="text-lg text-muted-foreground mb-8">
-          Discover how Lumora works and how you can use it to make a positive impact on the environment.
-        </p>
+        <p className="text-lg text-muted-foreground mb-8">Discover how Lumora works and how you can use it to make a positive impact on the environment.</p>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -29,15 +25,10 @@ export default function LearnBasics() {
         <Card>
           <CardHeader>
             <CardTitle>What is Lumora?</CardTitle>
-            <CardDescription>
-              Lumora is a platform that rewards users for eco-friendly actions while building a sustainable community.
-            </CardDescription>
+            <CardDescription>Lumora is a platform that rewards users for eco-friendly actions while building a sustainable community.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">
-              At its core, Lumora connects individuals, communities, and organizations committed to environmental
-              sustainability. Through our platform, you can:
-            </p>
+            <p className="mb-4">At its core, Lumora connects individuals, communities, and organizations committed to environmental sustainability. Through our platform, you can:</p>
             <ul className="space-y-3">
               <li className="flex items-start">
                 <Leaf className="h-5 w-5 mr-2 text-green-500 mt-0.5 flex-shrink-0" />
@@ -76,31 +67,19 @@ export default function LearnBasics() {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-semibold text-lg mb-2">Eco-Actions</h4>
-                <p>
-                  Eco-Actions are verifiable activities that have a positive impact on the environment. These can range
-                  from reducing energy consumption to participating in community clean-ups.
-                </p>
+                <p>Eco-Actions are verifiable activities that have a positive impact on the environment. These can range from reducing energy consumption to participating in community clean-ups.</p>
               </div>
               <div>
                 <h4 className="font-semibold text-lg mb-2">Impact Points</h4>
-                <p>
-                  Each Eco-Action earns you Impact Points, which quantify your environmental contribution. These points
-                  reflect the significance and consistency of your actions.
-                </p>
+                <p>Each Eco-Action earns you Impact Points, which quantify your environmental contribution. These points reflect the significance and consistency of your actions.</p>
               </div>
               <div>
                 <h4 className="font-semibold text-lg mb-2">Community Challenges</h4>
-                <p>
-                  Join forces with others in Community Challenges to amplify your impact. Collaborative efforts often
-                  yield greater rewards and foster a sense of shared purpose.
-                </p>
+                <p>Join forces with others in Community Challenges to amplify your impact. Collaborative efforts often yield greater rewards and foster a sense of shared purpose.</p>
               </div>
               <div>
                 <h4 className="font-semibold text-lg mb-2">Rewards System</h4>
-                <p>
-                  Your Impact Points can be exchanged for various rewards, including digital assets, exclusive access to
-                  sustainable products, and community recognition.
-                </p>
+                <p>Your Impact Points can be exchanged for various rewards, including digital assets, exclusive access to sustainable products, and community recognition.</p>
               </div>
             </CardContent>
           </Card>
@@ -115,58 +94,34 @@ export default function LearnBasics() {
             <CardContent>
               <ol className="space-y-6 relative before:absolute before:left-3 before:top-2 before:h-[calc(100%-16px)] before:w-[1px] before:bg-border">
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    1
-                  </div>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">1</div>
                   <h4 className="font-semibold text-lg mb-1">Create Your Account</h4>
-                  <p className="text-muted-foreground">
-                    Sign up with your email or connect your social accounts to create your Lumora profile.
-                  </p>
+                  <p className="text-muted-foreground">Sign up with your email or connect your social accounts to create your Lumora profile.</p>
                 </li>
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    2
-                  </div>
-                  <h4 className="font-semibold text-lg mb-1">Set Up Your ICP Wallet</h4>
-                  <p className="text-muted-foreground">
-                    Connect or create an Internet Computer Protocol wallet to store your digital assets.
-                  </p>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">2</div>
+                  <h4 className="font-semibold text-lg mb-1">Set Up Your Internet Identity</h4>
+                  <p className="text-muted-foreground">Connect or create an Internet Computer Protocol wallet to store your digital assets.</p>
                 </li>
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    3
-                  </div>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">3</div>
                   <h4 className="font-semibold text-lg mb-1">Perform Eco-Actions</h4>
-                  <p className="text-muted-foreground">
-                    Complete eco-friendly activities and log them in your Lumora account.
-                  </p>
+                  <p className="text-muted-foreground">Complete eco-friendly activities and log them in your Lumora account.</p>
                 </li>
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    4
-                  </div>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">4</div>
                   <h4 className="font-semibold text-lg mb-1">Verify Your Actions</h4>
-                  <p className="text-muted-foreground">
-                    Submit evidence of your eco-actions for verification through our transparent process.
-                  </p>
+                  <p className="text-muted-foreground">Submit evidence of your eco-actions for verification through our transparent process.</p>
                 </li>
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    5
-                  </div>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">5</div>
                   <h4 className="font-semibold text-lg mb-1">Earn Impact Points</h4>
-                  <p className="text-muted-foreground">
-                    Receive Impact Points based on the verified environmental impact of your actions.
-                  </p>
+                  <p className="text-muted-foreground">Receive Impact Points based on the verified environmental impact of your actions.</p>
                 </li>
                 <li className="pl-10 relative">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                    6
-                  </div>
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">6</div>
                   <h4 className="font-semibold text-lg mb-1">Redeem Rewards</h4>
-                  <p className="text-muted-foreground">
-                    Exchange your Impact Points for rewards or contribute to community initiatives.
-                  </p>
+                  <p className="text-muted-foreground">Exchange your Impact Points for rewards or contribute to community initiatives.</p>
                 </li>
               </ol>
             </CardContent>
@@ -182,9 +137,7 @@ export default function LearnBasics() {
             <CardContent className="space-y-6">
               <div>
                 <h4 className="font-semibold text-lg mb-2">Complete Your Profile</h4>
-                <p className="mb-2">
-                  Add your information, interests, and environmental goals to personalize your experience.
-                </p>
+                <p className="mb-2">Add your information, interests, and environmental goals to personalize your experience.</p>
                 <ul className="list-disc pl-5 text-muted-foreground">
                   <li>Upload a profile picture</li>
                   <li>Set your location to find local initiatives</li>
@@ -194,9 +147,7 @@ export default function LearnBasics() {
 
               <div>
                 <h4 className="font-semibold text-lg mb-2">Join Your First Challenge</h4>
-                <p className="mb-2">
-                  Browse available challenges and join one that aligns with your interests and capabilities.
-                </p>
+                <p className="mb-2">Browse available challenges and join one that aligns with your interests and capabilities.</p>
                 <ul className="list-disc pl-5 text-muted-foreground">
                   <li>Explore the Challenges section</li>
                   <li>Read the requirements and rewards</li>
@@ -229,5 +180,5 @@ export default function LearnBasics() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

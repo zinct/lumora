@@ -11,8 +11,6 @@ import { useToast } from "@/core/hooks/use-toast";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/core/components/ui/dialog";
-import { Alert, AlertTitle, AlertDescription } from "@/core/components/ui/alert";
-import { Gift, ArrowRight } from "lucide-react";
 
 function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   return centerCrop(
@@ -30,7 +28,57 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   );
 }
 
-export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting }) {
+const getLevelInfo = (level) => {
+  switch (level?.toLowerCase()) {
+    case "silver":
+      return {
+        color: "text-white",
+        holding: "100-500 LUM",
+        maxReward: "500 LUM",
+        fee: "10%",
+        badgeColor: "text-white border-white/20",
+      };
+    case "gold":
+      return {
+        color: "text-yellow-500",
+        holding: "500-2000 LUM",
+        maxReward: "2000 LUM",
+        fee: "15%",
+        badgeColor: "text-yellow-500 border-yellow-500/20",
+      };
+    case "diamond":
+      return {
+        color: "text-blue-500",
+        holding: "2000-5000 LUM",
+        maxReward: "5000 LUM",
+        fee: "20%",
+        badgeColor: "text-blue-500 border-blue-500/20",
+      };
+    default: // bronze
+      return {
+        color: "text-amber-500",
+        holding: "0-100 LUM",
+        maxReward: "100 LUM",
+        fee: "5%",
+        badgeColor: "text-amber-500 border-amber-500/20",
+      };
+  }
+};
+
+const getMaxRewardValue = (level) => {
+  switch (level?.toLowerCase()) {
+    case "silver":
+      return 500;
+    case "gold":
+      return 2000;
+    case "diamond":
+      return 5000;
+    default: // bronze
+      return 100;
+  }
+};
+
+export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting, communityLevel }) {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
   const imgRef = useRef(null);
@@ -44,8 +92,8 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
     category: initialData.category || "",
     startDate: initialData.startDate ? new Date(initialData.startDate) : null,
     endDate: initialData.endDate ? new Date(initialData.endDate) : null,
-    reward: initialData.reward || 0,
-    maxParticipants: initialData.maxParticipants || 0,
+    reward: initialData.reward,
+    maxParticipants: initialData.maxParticipants,
     impact: initialData.impact || "",
     address: initialData.address || "",
     image: null,
@@ -54,6 +102,9 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
 
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(initialData.imageUrl || null);
+
+  const levelInfo = getLevelInfo(communityLevel);
+  const maxReward = getMaxRewardValue(communityLevel);
 
   const onImageLoad = useCallback((e) => {
     const { width, height } = e.currentTarget;
@@ -177,6 +228,16 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
     if (!formData.maxParticipants) newErrors.maxParticipants = "Max participants is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
 
+    // Reward validation based on community level
+    if (formData.reward) {
+      if (formData.reward > maxReward) {
+        newErrors.reward = `Maximum reward for ${communityLevel?.toUpperCase() || "BRONZE"} level is ${maxReward} LUM`;
+      }
+      if (formData.reward <= 0) {
+        newErrors.reward = "Reward must be greater than 0";
+      }
+    }
+
     // Date validation
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
       newErrors.endDate = "End date must be after start date";
@@ -190,7 +251,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4 pt-4 border-t">
         <div className="flex items-start gap-3">
-          <Trophy className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+          <Trophy className={`h-5 w-5 ${levelInfo.color} mt-0.5 flex-shrink-0`} />
           <div>
             <h3 className="font-medium text-sm">Community Level Terms</h3>
             <p className="text-xs text-muted-foreground mt-1">By creating this project, you agree to the following terms based on your Community Level:</p>
@@ -202,27 +263,27 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
             <div className="flex items-center gap-2 text-xs">
               <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Your Current Level:</span>
-              <Badge variant="outline" className="ml-auto text-amber-500 border-amber-500/20">
-                Bronze
+              <Badge variant="outline" className={`ml-auto ${levelInfo.badgeColor}`}>
+                {communityLevel?.toUpperCase() || "BRONZE"}
               </Badge>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
               <BadgeDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Maximum Reward:</span>
-              <span className="ml-auto font-medium">100 LUM</span>
+              <span className="ml-auto font-medium">{levelInfo.maxReward}</span>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
               <PercentCircle className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Fee to Organizer:</span>
-              <span className="ml-auto font-medium">5%</span>
+              <span className="ml-auto font-medium">{levelInfo.fee}</span>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
               <Info className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Required Holding:</span>
-              <span className="ml-auto font-medium">0-100 LUM</span>
+              <span className="ml-auto font-medium">{levelInfo.holding}</span>
             </div>
           </div>
 
@@ -339,7 +400,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Input id="maxParticipants" type="number" min="0" value={formData.maxParticipants} onChange={(e) => handleChange("maxParticipants", Number.parseInt(e.target.value))} placeholder="Enter max participants (0 for unlimited)" className={errors.maxParticipants ? "border-red-500" : ""} />
+            <Input id="maxParticipants" type="number" min="0" value={formData.maxParticipants || ""} onChange={(e) => handleChange("maxParticipants", e.target.value ? Number.parseInt(e.target.value) : "")} placeholder="Enter max participants (0 for unlimited)" className={errors.maxParticipants ? "border-red-500" : ""} />
             {errors.maxParticipants && <p className="text-sm text-red-500">{errors.maxParticipants}</p>}
           </div>
 
@@ -354,12 +415,12 @@ export function ProjectForm({ onSubmit, onCancel, initialData = {}, isSubmitting
                     <Info className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Total LUM tokens allocated as rewards for this project</p>
+                    <p>Total LUM tokens allocated as rewards for this project (Max: {maxReward} LUM)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Input id="reward" type="number" min="0" value={formData.reward} onChange={(e) => handleChange("reward", Number.parseInt(e.target.value))} placeholder="Enter reward amount" className={errors.reward ? "border-red-500" : ""} />
+            <Input id="reward" type="number" min="0" max={maxReward} value={formData.reward || ""} onChange={(e) => handleChange("reward", e.target.value ? Number.parseInt(e.target.value) : "")} placeholder={`Enter reward amount (Max: ${maxReward} LUM)`} className={errors.reward ? "border-red-500" : ""} />
             {errors.reward && <p className="text-sm text-red-500">{errors.reward}</p>}
           </div>
         </div>

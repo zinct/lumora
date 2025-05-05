@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import { DashboardOverview } from "@/core/components/community/dashboard-overview";
 import { ProjectManagement } from "@/core/components/community/project-management";
 import { SubmissionReview } from "@/core/components/community/submission-review";
 import { RewardManagement } from "@/core/components/community/reward-management";
 import { AdminGuard } from "@/core/components/community/admin-guard";
 import CommunityBalance from "../core/components/community/community-balance";
 import { useSearchParams } from "react-router";
+import { toast } from "react-toastify";
 
 export default function CommunityDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(true);
@@ -14,6 +14,7 @@ export default function CommunityDashboardPage() {
 
   // If not logged in or not an admin, show login prompt
   if (!isAdmin) {
+    toast.error("You need to be logged in as an admin to access this page");
     return <AdminGuard onLogin={() => openLoginModal("community", "/community/admin")} />;
   }
 

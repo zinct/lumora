@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Shield, CheckCircle, AlertCircle, User, Users } from "lucide-react";
+import { X, CheckCircle, AlertCircle, User, Users } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { Button } from "@/core/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { backend } from "declarations/backend";
 import { Actor } from "@dfinity/agent";
 import { useAuth } from "@/core/providers/auth-provider";
+import { toast } from "react-toastify";
 
 export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -54,33 +55,42 @@ export default function RegistrationModal({ isOpen, onClose, redirectPath = "/" 
     setIsLoading(true);
     setStatus(null);
 
-    // Validate form data
-    let isValid = true;
-    if (role === "participant" && !formData.participantName.trim()) {
-      isValid = false;
-    } else if (role === "community" && !formData.communityName.trim()) {
-      isValid = false;
-    }
+    try {
+      // Validate form data
+      let isValid = true;
+      if (role === "participant" && !formData.participantName.trim()) {
+        isValid = false;
+        toast.error("Please enter your participant name");
+      } else if (role === "community" && !formData.communityName.trim()) {
+        isValid = false;
+        toast.error("Please enter your community name");
+      }
 
-    if (!isValid) {
+      if (!isValid) {
+        setStatus("error");
+        setIsLoading(false);
+        return;
+      }
+
+      Actor.agentOf(backend).replaceIdentity(identity);
+      const registerResponse = await backend.register({
+        name: role === "participant" ? formData.participantName : formData.communityName,
+        registerAs: role,
+      });
+
+      if ("Ok" in registerResponse) {
+        setStatus("success");
+        setIsLoading(false);
+        document.location.reload();
+      } else if ("Err" in registerResponse) {
+        setStatus("error");
+        setIsLoading(false);
+        toast.error(registerResponse.Err || "Registration failed. Please try again.");
+      }
+    } catch (error) {
       setStatus("error");
       setIsLoading(false);
-      return;
-    }
-
-    Actor.agentOf(backend).replaceIdentity(identity);
-    const registerResponse = await backend.register({
-      name: role === "participant" ? formData.participantName : formData.communityName,
-      registerAs: role,
-    });
-
-    if ("Ok" in registerResponse) {
-      setStatus("success");
-      setIsLoading(false);
-      document.location.reload();
-    } else if ("Err" in registerResponse) {
-      setStatus("error");
-      setIsLoading(false);
+      toast.error(error.message || "An unexpected error occurred. Please try again.");
     }
   };
 

@@ -11,10 +11,9 @@ import { Textarea } from "@/core/components/ui/textarea";
 import { Label } from "@/core/components/ui/label";
 import { EmptyState } from "@/core/components/ui/empty-state";
 import { backend } from "declarations/backend";
-import { useToast } from "@/core/hooks/use-toast";
+import { toast } from "react-toastify";
 
 export function SubmissionReview() {
-  const { toast } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState("");
@@ -52,11 +51,7 @@ export function SubmissionReview() {
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch submissions",
-        variant: "destructive",
-      });
+      toast.error("Failed to fetch submissions");
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +79,7 @@ export function SubmissionReview() {
       } else {
         setIsRejecting(true);
       }
+      console.log("submission", selectedSubmission);
 
       const result = await backend.feedbackEvidence({
         evidenceId: selectedSubmission.id,
@@ -91,28 +87,19 @@ export function SubmissionReview() {
         status: status === "approved" ? { approved: null } : { rejected: null },
       });
 
+      console.log("result", result);
+
       if ("Ok" in result) {
-        toast({
-          title: "Success",
-          description: `Submission ${status} successfully`,
-        });
+        toast.success(`Submission ${status} successfully`);
         await fetchSubmissions();
         setIsReviewDialogOpen(false);
         setReviewFeedback("");
       } else {
-        toast({
-          title: "Error",
-          description: result.Err,
-          variant: "destructive",
-        });
+        toast.error(result.Err);
       }
     } catch (error) {
       console.error(`Error ${status} submission:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${status} submission`,
-        variant: "destructive",
-      });
+      toast.error(`Failed to ${status} submission`);
     } finally {
       setIsApproving(false);
       setIsRejecting(false);

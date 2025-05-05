@@ -114,23 +114,6 @@ export default function NFTsPage() {
     setIsRedemptionModalOpen(true);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <main className="flex-1 container py-12 flex flex-col items-center justify-center">
-          <div className="text-center max-w-md">
-            <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h1 className="text-2xl font-bold mb-2">Login Required</h1>
-            <p className="text-muted-foreground mb-6">Please log in to view and manage your NFTs.</p>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate("/login")}>
-              Login
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -212,38 +195,53 @@ export default function NFTsPage() {
           </TabsContent>
 
           <TabsContent value="my-nfts">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Your NFT Collection</h2>
-              <p className="text-muted-foreground">NFTs you've earned through your sustainability actions and token redemptions</p>
-            </div>
-
-            {userNFTs.length === 0 ? (
-              <div className="text-center py-12">
-                <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-medium mb-2">No NFTs Yet</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">You haven't earned any NFTs yet. Complete sustainability challenges or redeem tokens to earn your first NFT.</p>
-                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate("/projects")}>
-                  Explore Projects
-                </Button>
+            {!user ? (
+              <div className="mt-12 flex flex-col">
+                <main className="flex-1 container py-12 flex flex-col items-center justify-center">
+                  <div className="text-center max-w-md">
+                    <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <h1 className="text-2xl font-bold mb-2">Login Required</h1>
+                    <p className="text-muted-foreground mb-6">Please log in to view and manage your NFTs.</p>
+                  </div>
+                </main>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredUserNFTs.map(([tokenId, metadata, price, maxRedemptions, currentRedemptions]) => (
-                  <NFTCard
-                    key={tokenId}
-                    tokenId={tokenId}
-                    metadata={metadata}
-                    price={price}
-                    canRedeem={false}
-                    userTokens={user?.balance}
-                    onRedeemClick={handleRedeemClick}
-                    onClick={() => {
-                      setSelectedNFT({ tokenId, metadata, price, maxRedemptions, currentRedemptions, isRedeemed: true });
-                      setIsModalOpen(true);
-                    }}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold mb-2">Your NFT Collection</h2>
+                  <p className="text-muted-foreground">NFTs you've earned through your sustainability actions and token redemptions</p>
+                </div>
+
+                {userNFTs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-xl font-medium mb-2">No NFTs Yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">You haven't earned any NFTs yet. Complete sustainability challenges or redeem tokens to earn your first NFT.</p>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate("/projects")}>
+                      Explore Projects
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredUserNFTs.map(([tokenId, metadata, price, maxRedemptions, currentRedemptions]) => (
+                      <NFTCard
+                        key={tokenId}
+                        tokenId={tokenId}
+                        metadata={metadata}
+                        price={price}
+                        canRedeem={false}
+                        isRedeemed={true}
+                        userTokens={user?.balance}
+                        onRedeemClick={handleRedeemClick}
+                        onClick={() => {
+                          setSelectedNFT({ tokenId, metadata, price, maxRedemptions, currentRedemptions, isRedeemed: true });
+                          setIsModalOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>

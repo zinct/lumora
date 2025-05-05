@@ -1,4 +1,6 @@
 import { Coins, AlertTriangle, CheckCircle2, X, Star, Leaf, Zap, Crown } from "lucide-react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/core/components/ui/dialog";
 import { Button } from "@/core/components/ui/button";
@@ -42,11 +44,9 @@ const getRarityColor = (rarity) => {
 
 export function NFTRedemptionModal({ nft, isOpen, onClose, userTokens, isRedeemed }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   async function handleRedeem() {
     setIsLoading(true);
-    setError(null);
 
     try {
       const nftPrincipal = Principal.fromText(nftCanisterId);
@@ -54,7 +54,7 @@ export function NFTRedemptionModal({ nft, isOpen, onClose, userTokens, isRedeeme
       const approveParams = {
         from_subaccount: [],
         spender: nftPrincipal,
-        amount: BigInt(nft.tokenCost) * BigInt(10 ** 8), // Convert BigInt to Number
+        amount: BigInt(nft.tokenCost) * BigInt(10 ** 8),
         expires_at: [],
         fee: [],
         memo: [new TextEncoder().encode(`Approve for NFT #${parseInt(nft.tokenId)} redemption`)],
@@ -63,20 +63,22 @@ export function NFTRedemptionModal({ nft, isOpen, onClose, userTokens, isRedeeme
       const approveResult = await tokenCanister.icrc2_approve(approveParams);
 
       if ("Err" in approveResult) {
-        throw new Error(`Failed to approve tokens: ${approveResult.Err}`);
+        toast.error(`Failed to approve tokens: ${approveResult.Err}`);
+        return;
       }
 
       // Then proceed with redemption
       const result = await nftCanister.redeem(Number(nft.tokenId));
 
       if ("Ok" in result) {
+        toast.success("NFT redeemed successfully!");
         window.location.reload();
       } else {
-        setError(result.Err);
+        toast.error(result.Err);
       }
     } catch (error) {
       console.error("Error in redemption process:", error);
-      setError(error.message || "An error occurred while redeeming the NFT. Please try again.");
+      toast.error(error.message || "An error occurred while redeeming the NFT. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +145,7 @@ export function NFTRedemptionModal({ nft, isOpen, onClose, userTokens, isRedeeme
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button onClick={handleRedeem} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700" disabled={false || isLoading || isRedeemed}>
+          <Button onClick={handleRedeem} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700" disabled={userTokens < nft.tokenCost || isLoading || isRedeemed}>
             <Coins className="h-4 w-4 mr-2" />
             {isLoading ? "Confirming..." : "Confirm Redemption"}
           </Button>

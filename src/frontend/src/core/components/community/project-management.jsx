@@ -9,29 +9,45 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProjectForm } from "@/core/components/community/project-form";
 import { backend } from "declarations/backend";
 import { useAuth } from "@/core/providers/auth-provider";
-import { useToast } from "@/core/hooks/use-toast";
 import { useNavigate } from "react-router";
 import { EmptyState } from "@/core/components/ui/empty-state";
 import { Award } from "lucide-react";
+import { toast } from "react-toastify";
 
 export function ProjectManagement() {
   const { isAuthenticated, identity } = useAuth();
-  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingCommunityLevel, setIsFetchingCommunityLevel] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("active");
+  const [communityLevel, setCommunityLevel] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchProjects();
+      fetchCommunityLevel();
     }
   }, [isAuthenticated]);
+
+  const fetchCommunityLevel = async () => {
+    try {
+      setIsFetchingCommunityLevel(true);
+      const result = await backend.getCommunityLevel(identity.getPrincipal());
+      setIsFetchingCommunityLevel(false);
+      setCommunityLevel(Object.keys(result.Ok)[0]);
+    } catch (error) {
+      console.error("Error fetching community level:", error);
+      setCommunityLevel({ level: "bronze", error: "Failed to fetch community level" });
+      toast.error(error.message || "Failed to fetch community level");
+    } finally {
+      setIsFetchingCommunityLevel(false);
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -56,19 +72,11 @@ export function ProjectManagement() {
           }))
         );
       } else {
-        toast({
-          title: "Error",
-          description: response.Err,
-          variant: "destructive",
-        });
+        toast.error(response.Err || "Failed to fetch projects");
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch projects",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to fetch projects");
     } finally {
       setIsLoading(false);
     }
@@ -91,11 +99,7 @@ export function ProjectManagement() {
       setIsSubmitting(true);
 
       if (!identity) {
-        toast({
-          title: "Error",
-          description: "Please login first",
-          variant: "destructive",
-        });
+        toast.error("Please login first");
         return;
       }
 
@@ -114,11 +118,7 @@ export function ProjectManagement() {
           imageData = Array.from(uint8Array);
         } catch (fileError) {
           console.error("Error processing file:", fileError);
-          toast({
-            title: "Error",
-            description: `Failed to process image: ${fileError.message}`,
-            variant: "destructive",
-          });
+          toast.error(`Failed to process image: ${fileError.message}`);
           return;
         }
       }
@@ -130,7 +130,7 @@ export function ProjectManagement() {
         startDate: startDate,
         expiredAt: expiredAt,
         reward: BigInt(projectData.reward),
-        imageData: [imageData],
+        imageData: imageData ? [imageData] : [],
         category: { [projectData.category]: null },
         maxParticipants: BigInt(projectData.maxParticipants),
         address: projectData.address,
@@ -141,26 +141,15 @@ export function ProjectManagement() {
       const response = await backend.createProject(params);
 
       if ("Ok" in response) {
-        toast({
-          title: "Success",
-          description: "Project created successfully",
-        });
+        toast.success("Project created successfully");
         setIsCreateDialogOpen(false);
         fetchProjects(); // Refresh project list
       } else {
-        toast({
-          title: "Error",
-          description: response.Err,
-          variant: "destructive",
-        });
+        toast.error(response.Err || "Failed to create project");
       }
     } catch (error) {
       console.error("Error creating project:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create project",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to create project");
     } finally {
       setIsSubmitting(false);
     }
@@ -232,6 +221,36 @@ export function ProjectManagement() {
     }
   };
 
+  const getLevelColor = (level) => {
+    switch (level) {
+      case "bronze":
+        return "text-amber-500";
+      case "silver":
+        return "text-white";
+      case "gold":
+        return "text-yellow-500";
+      case "diamond":
+        return "text-blue-500";
+      default:
+        return "text-amber-500";
+    }
+  };
+
+  const getMaxReward = (level) => {
+    switch (level) {
+      case "bronze":
+        return 100;
+      case "silver":
+        return 500;
+      case "gold":
+        return 1000;
+      case "diamond":
+        return 2000;
+      default:
+        return 100;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -291,35 +310,34 @@ export function ProjectManagement() {
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>Fill in the details to create a new sustainability project</DialogDescription>
             </DialogHeader>
-            <ProjectForm onSubmit={handleCreateProject} onCancel={() => setIsCreateDialogOpen(false)} isSubmitting={isSubmitting} />
+            {isFetchingCommunityLevel || <ProjectForm onSubmit={handleCreateProject} onCancel={() => setIsCreateDialogOpen(false)} isSubmitting={isSubmitting} communityLevel={communityLevel} />}
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="bg-card border rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <Trophy className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium">Community Organizer Levels</h3>
-              <Badge variant="outline" className="text-xs">
-                Important
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Your Community Level determines the maximum rewards you can offer and the fees you'll earn. Currently, you're at the <span className="font-medium text-amber-500">Bronze Level</span> with a maximum reward of 100 LUM per project.
-            </p>
-            <div className="flex items-center gap-2">
-              <a href="#" onClick={() => navigate("/?section=levels")}>
-                <Button variant="outline" size="sm" className="h-8">
-                  View Level System
-                  <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </a>
+      {isFetchingCommunityLevel || (
+        <div className="bg-card border rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Trophy className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">Community Organizer Levels</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Your Community Level determines the maximum rewards you can offer and the fees you'll earn. Currently, you're at the <span className={`font-medium ${getLevelColor(communityLevel)}`}>{communityLevel.toUpperCase()}</span> level with a maximum reward of {getMaxReward(communityLevel)} LUM per project.
+              </p>
+              <div className="flex items-center gap-2">
+                <a href="#" onClick={() => navigate("/resources#learn-community")}>
+                  <Button variant="outline" size="sm" className="h-8">
+                    View Level System
+                    <ArrowRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -385,9 +403,6 @@ export function ProjectManagement() {
                       <div className="flex items-center justify-center space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => navigate(`/projects/${project.id}`)}>
                           <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

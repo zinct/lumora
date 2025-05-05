@@ -129,6 +129,26 @@ export function RewardManagement() {
     }
   };
 
+  const getCommunityFee = (level) => {
+    switch (level) {
+      case "bronze":
+        return { fee: 5, maxReward: 100 };
+      case "silver":
+        return { fee: 10, maxReward: 500 };
+      case "gold":
+        return { fee: 15, maxReward: 2000 };
+      case "diamond":
+        return { fee: 20, maxReward: 5000 };
+      default:
+        return { fee: 5, maxReward: 100 };
+    }
+  };
+
+  const calculateCommunityFee = (totalAmount, level) => {
+    const { fee } = getCommunityFee(level);
+    return (totalAmount * fee) / 100;
+  };
+
   const filteredRewards = rewards.filter((reward) => {
     const matchesSearch = reward.title.toLowerCase().includes(searchQuery.toLowerCase()) || reward.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || reward.status.toLowerCase() === statusFilter;
@@ -421,6 +441,13 @@ export function RewardManagement() {
                     <div className="font-medium flex items-center">
                       <Leaf className="h-4 w-4 mr-2 text-emerald-500" />
                       {selectedReward.totalAmount} LUM
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground">LUM you will get</div>
+                    <div className="font-medium flex items-center">
+                      <Leaf className="h-4 w-4 mr-2 text-emerald-500" />
+                      {calculateCommunityFee(selectedReward.totalAmount, selectedReward.projectLevel)} LUM
                     </div>
                   </div>
                 </div>

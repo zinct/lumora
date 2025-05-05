@@ -1,11 +1,14 @@
 import { useEffect } from "react";
-import { useParams } from "react-router";
+import { useLocation } from "react-router";
 
 export default function ScrollToTop() {
-  const { pathname } = useParams();
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({
+      top: 0,
+      behavior: "instant", // Menggunakan "instant" untuk scroll langsung tanpa animasi
+    });
   }, [pathname]);
 
   return null;

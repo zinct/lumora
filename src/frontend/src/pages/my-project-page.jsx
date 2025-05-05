@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/core/components/ui/progress";
 import { useAuth } from "@/core/providers/auth-provider";
 import { backend } from "declarations/backend";
-import { useToast } from "@/core/hooks/use-toast";
 import { useNavigate } from "react-router";
+import { toast } from "react-toastify";
 
 const renderProjectStatus = (status) => {
   status = parseInt(status);
@@ -55,7 +55,6 @@ const renderProjectStatus = (status) => {
 
 export default function MyProjectsPage() {
   const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [joinedProjects, setJoinedProjects] = useState([]);
@@ -90,19 +89,11 @@ export default function MyProjectsPage() {
           }))
         );
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch projects",
-          variant: "destructive",
-        });
+        toast.error(projects.Err || "Failed to fetch projects");
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch projects",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to fetch projects. Please try again.");
     } finally {
       setIsLoading(false);
     }

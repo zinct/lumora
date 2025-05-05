@@ -1,9 +1,8 @@
-import { BookOpen, LineChart, Wallet } from "lucide-react"
-import ResourcesHeader from "@/core/components/resources/resources-header"
-import LearnBasics from "@/core/components/resources/learn-basics"
-import TrackActions from "@/core/components/resources/track-actions"
-import SetupWallet from "@/core/components/resources/setup-wallet"
-
+import { BookOpen, LineChart, Users } from "lucide-react";
+import ResourcesHeader from "@/core/components/resources/resources-header";
+import LearnBasics from "@/core/components/resources/learn-basics";
+import TrackActions from "@/core/components/resources/track-actions";
+import LearnCommunity from "../core/components/resources/learn-community";
 
 export default function ResourcePage() {
   return (
@@ -12,26 +11,17 @@ export default function ResourcePage() {
 
       {/* Simple section navigation */}
       <div className="flex justify-center gap-4 my-8">
-        <a
-          href="#learn-basics"
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-        >
+        <a href="#learn-basics" className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors">
           <BookOpen className="h-4 w-4" />
           <span>Basics</span>
         </a>
-        <a
-          href="#track-actions"
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-        >
+        <a href="#track-actions" className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors">
           <LineChart className="h-4 w-4" />
           <span>Tracking</span>
         </a>
-        <a
-          href="#setup-wallet"
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-        >
-          <Wallet className="h-4 w-4" />
-          <span>Wallet</span>
+        <a href="#community" className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors">
+          <Users className="h-4 w-4" />
+          <span>Community</span>
         </a>
       </div>
 
@@ -43,10 +33,10 @@ export default function ResourcePage() {
         <section id="track-actions">
           <TrackActions />
         </section>
-        <section id="setup-wallet">
-          <SetupWallet />
+        <section id="community">
+          <LearnCommunity />
         </section>
       </div>
     </div>
-  )
+  );
 }
