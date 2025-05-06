@@ -13,7 +13,7 @@ import Error "mo:base/Error";
 import Types "../types";
 import TokenCanister "canister:token";
 import CommunityModule "../modules/community";
-
+import Debug "mo:base/Debug";
 module {
     type Result<T, E> = Types.Result<T, E>;
     type EvidenceId = Types.EvidenceId;
@@ -62,6 +62,7 @@ module {
         };
 
         public func createProject(caller: Principal, params: CreateProjectParams) : async Result<ProjectId, Text> {
+            Debug.print(debug_show(params.imageData));
             if (Option.isNull(communityStore.get(caller))) { 
                 return #Err("Only communities can create projects");
             };

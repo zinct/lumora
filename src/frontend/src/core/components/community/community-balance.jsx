@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import { Badge } from "@/core/components/ui/badge";
-import { TokenSwap } from "@/core/components/balance/token-swap";
 import { TransactionHistory } from "@/core/components/balance/transaction-history";
-import { ArrowUpRight, ArrowDownRight, Clock, Leaf, Receipt } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { convertE8sToToken } from "@/core/lib/canisterUtils";
 import { token } from "declarations/token";
 import { useAuth } from "@/core/providers/auth-provider";

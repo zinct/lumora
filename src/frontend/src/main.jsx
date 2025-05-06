@@ -21,7 +21,7 @@ import ScrollToTop from "@/core/components/scroll-to-top";
 import AssistantPage from "./pages/assitant/assistant-page";
 import { Toaster } from "@/core/components/ui/toaster";
 import NotFoundPage from "./pages/SEO/not-found-page";
-import AuthGuard from "@/core/components/guards/auth-guard";
+import AuthGuard from "@/core/components/auth/auth-guard";
 
 NProgress.configure({
   minimum: 0.3,

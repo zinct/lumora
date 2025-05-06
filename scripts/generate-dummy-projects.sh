@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 
 # Create and use dummy identity
 echo "Creating dummy identity..."
@@ -37,17 +40,6 @@ IMPACTS=(
     "2.8 tons CO2 reduced"
     "4.2 tons waste recycled"
     "5.0 tons emissions avoided"
-    "2.5 tons plastic collected"
-    "3.0 tons food waste saved"
-    "6.5 tons carbon offset"
-    "4.8 tons water cleaned"
-    "2.2 tons e-waste recycled"
-    "7.0 tons organic waste processed"
-    "1.8 tons plastic upcycled"
-    "4.5 tons emissions reduced"
-    "3.2 tons waste prevented"
-    "5.5 tons water saved"
-    "2.7 tons carbon captured"
 )
 
 # Sample addresses (Indonesian cities)
@@ -56,17 +48,6 @@ ADDRESSES=(
     "Jakarta Selatan, Indonesia"
     "Yogyakarta, Indonesia"
     "Surabaya, Indonesia"
-    "Malang, Indonesia"
-    "Semarang, Indonesia"
-    "Medan, Indonesia"
-    "Bali, Indonesia"
-    "Palembang, Indonesia"
-    "Makassar, Indonesia"
-    "Bogor, Indonesia"
-    "Manado, Indonesia"
-    "Padang, Indonesia"
-    "Balikpapan, Indonesia"
-    "Pontianak, Indonesia"
 )
 
 # Sample project titles
@@ -75,71 +56,54 @@ TITLES=(
     "Student Innovation Challenge" 
     "Educational Content Creation"
     "Community Knowledge Sharing"
-    "Tech Mentorship Program"
-    "Sustainable Development Workshop"
-    "Social Impact Documentation"
-    "Environmental Data Collection"
-    "Healthcare Access Initiative"
-    "Smart Agriculture Solutions"
-    "Renewable Energy Project"
-    "Green Transportation Study"
-    "Zero Waste Campaign"
-    "Clean Water Initiative"
-    "Climate Change Research"
-    "Wildlife Conservation Project"
-    "Biodiversity Mapping"
-    "Smart City Planning"
-    "Rural Connectivity Project"
-    "Food Security Program"
-    "Ocean Cleanup Initiative"
-    "Forest Conservation Plan"
-    "Air Quality Monitoring"
-    "Sustainable Housing Design"
-    "Green Energy Education"
-    "Eco-Tourism Development"
-    "Waste Recycling Program"
-    "Water Conservation Study"
-    "Urban Farming Project"
-    "Sustainable Fishing Initiative"
 )
 
 # Sample project descriptions
 DESCRIPTIONS=(
-    "Collaborate on research projects focusing on emerging technologies and their impact on society"
-    "Join a challenge to develop innovative solutions for local community problems"
-    "Create educational content to help others learn about technology and innovation"
-    "Share knowledge and experiences through community-driven learning sessions"
-    "Participate in mentorship program to guide aspiring technologists"
-    "Develop sustainable solutions for environmental challenges through workshops"
-    "Document and share stories of social impact initiatives in technology"
-    "Collect and analyze environmental data for conservation efforts"
-    "Improve healthcare accessibility in underserved communities"
-    "Implement smart agriculture solutions for sustainable farming"
-    "Develop renewable energy solutions for rural areas"
-    "Study and propose green transportation alternatives"
-    "Launch community-wide zero waste initiatives"
-    "Implement clean water solutions in developing regions"
-    "Research climate change impacts on local ecosystems"
-    "Protect and monitor local wildlife populations"
-    "Map and preserve local biodiversity"
-    "Plan and implement smart city solutions"
-    "Connect rural communities through technology"
-    "Ensure food security through sustainable practices"
-    "Organize ocean cleanup and preservation efforts"
-    "Protect and restore forest ecosystems"
-    "Monitor and improve urban air quality"
-    "Design sustainable and affordable housing"
-    "Educate communities about renewable energy"
-    "Develop sustainable tourism practices"
-    "Implement effective waste recycling systems"
-    "Study and implement water conservation methods"
-    "Create urban farming solutions"
-    "Develop sustainable fishing practices"
+    "Collaborate on research projects focusing on emerging technologies and their impact on society. This project will involve quarterly research sprints, monthly progress reports, and bi-weekly team meetings. We'll establish research clusters focusing on AI ethics, blockchain applications, and sustainable tech solutions. Each participant will contribute to at least one research paper and present findings at our virtual symposium. The project aims to create a comprehensive knowledge base of emerging technologies and their societal implications. Through collaborative research, we'll explore ethical considerations, potential applications, and risk mitigation strategies. Regular workshops and expert sessions will be conducted to ensure high-quality research output. The final deliverables will include research papers, case studies, and policy recommendations that can guide future technological development."
+    "Join a challenge to develop innovative solutions for local community problems. The program runs for 3 months with weekly milestones. Teams will identify local issues, conduct user research, prototype solutions, and present to community stakeholders. We'll provide mentorship, technical resources, and a $5000 prize pool for winning solutions. Regular workshops on design thinking and rapid prototyping will be conducted. The challenge focuses on addressing real-world problems through innovative technology solutions. Teams will work closely with community members to understand their needs and develop practical solutions. The program includes access to prototyping tools, cloud resources, and expert mentorship. Final solutions will be evaluated based on their impact, feasibility, and sustainability. Winning teams will receive funding to implement their solutions and ongoing support for scaling their impact."
+    "Create educational content to help others learn about technology and innovation. This initiative spans 6 months with monthly content themes. Participants will create video tutorials, written guides, and interactive workshops. We'll provide content creation tools, training on educational design, and a platform to host materials. Each contributor will create at least 5 pieces of content and receive feedback from industry experts. The project aims to democratize access to technology education through high-quality, engaging content. Content creators will focus on making complex technical concepts accessible to beginners while maintaining accuracy and depth. The program includes training in instructional design, multimedia production, and educational psychology. Regular peer reviews and expert feedback sessions will ensure content quality. The final content library will be made freely available to the community, with special attention to accessibility and localization."
+    "Share knowledge and experiences through community-driven learning sessions. The program includes weekly virtual meetups, monthly workshops, and quarterly hackathons. We'll establish special interest groups for different tech domains, organize peer review sessions, and maintain a knowledge base. Participants will lead at least one session and contribute to our community documentation. The initiative focuses on creating a vibrant learning community where members can share expertise and learn from each other. Special interest groups will cover topics like AI, blockchain, cybersecurity, and sustainable tech. Each session will be recorded and documented for future reference. The program includes training in facilitation, public speaking, and community building. Regular networking events will help participants build professional connections. The knowledge base will serve as a valuable resource for the broader community."
 )
+
+# Function to create a temporary file with the project data
+create_project_data_file() {
+    local title=$1
+    local description=$2
+    local startDate=$3
+    local expiredAt=$4
+    local reward=$5
+    local imageData=$6
+    local category=$7
+    local maxParticipants=$8
+    local impact=$9
+    local address=${10}
+    
+    # Create a temporary file
+    local temp_file=$(mktemp)
+    
+    # Write the project data to the temporary file
+    cat > "$temp_file" << EOF
+record { 
+    title = "$title"; 
+    description = "$description"; 
+    startDate = $startDate; 
+    expiredAt = $expiredAt; 
+    reward = $reward; 
+    imageData = $imageData; 
+    category = variant { $category }; 
+    maxParticipants = $maxParticipants;
+    impact = "$impact";
+    address = "$address"
+}
+EOF
+    
+    echo "$temp_file"
+}
 
 # Loop through and create projects
 echo "Creating projects..."
-for i in {0..29}; do
+for i in {0..3}; do
     # Generate random reward between 1-20
     RANDOM_REWARD=$((RANDOM % 20 + 1))
     # Generate random max participants between 100-250
@@ -168,20 +132,39 @@ for i in {0..29}; do
             ;;
     esac
     
+    # Convert image to hex using absolute path
+    IMAGE_PATH="${SCRIPT_DIR}/projects/${i}.png"
+    echo "Looking for image at: $IMAGE_PATH"
+    if [ -f "$IMAGE_PATH" ]; then
+        # Create a temporary file for the hex data
+        HEX_TEMP_FILE=$(mktemp)
+        xxd -p "$IMAGE_PATH" | tr -d '\n' > "$HEX_TEMP_FILE"
+        IMAGE_DATA="blob \"$(cat $HEX_TEMP_FILE)\""
+        rm "$HEX_TEMP_FILE"
+    else
+        IMAGE_DATA="null"
+    fi
+    
+    # Create project data file
+    PROJECT_DATA_FILE=$(create_project_data_file \
+        "${TITLES[$i]}" \
+        "${DESCRIPTIONS[$i]}" \
+        "$START_DATE" \
+        "$END_DATE" \
+        "$RANDOM_REWARD" \
+        "$IMAGE_DATA" \
+        "${CATEGORIES[$(($i % 7))]}" \
+        "$RANDOM_MAX_PARTICIPANTS" \
+        "${IMPACTS[$IMPACT_INDEX]}" \
+        "${ADDRESSES[$ADDRESS_INDEX]}"
+    )
+    
     # Create project using dfx
-    echo "Creating project $(($i + 1))/30: ${TITLES[$i]}"
-    dfx canister call backend createProject "record { 
-        title = \"${TITLES[$i]}\"; 
-        description = \"${DESCRIPTIONS[$i]}\"; 
-        startDate = ${START_DATE}; 
-        expiredAt = ${END_DATE}; 
-        reward = ${RANDOM_REWARD}; 
-        imageUrl = null; 
-        category = variant { ${CATEGORIES[$(($i % 7))]} }; 
-        maxParticipants = ${RANDOM_MAX_PARTICIPANTS};
-        impact = \"${IMPACTS[$IMPACT_INDEX]}\";
-        address = \"${ADDRESSES[$ADDRESS_INDEX]}\"
-    }"
+    echo "Creating project $(($i + 1))/4: ${TITLES[$i]}"
+    dfx canister call backend createProject "$(cat $PROJECT_DATA_FILE)"
+    
+    # Clean up
+    rm "$PROJECT_DATA_FILE"
 done
 
 echo "Successfully generated dummy projects!"

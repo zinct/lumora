@@ -3,7 +3,7 @@ import { AuthClient } from "@dfinity/auth-client";
 import { Actor } from "@dfinity/agent";
 import { getInternetIdentityNetwork } from "@/core/lib/canisterUtils";
 import { backend } from "declarations/backend";
-import { LoginModal } from "@/core/components/login-modal";
+import { LoginModal } from "@/core/components/auth/login-modal";
 import RegisterModal from "@/core/components/auth/register-modal";
 import { nft } from "declarations/nft";
 import { token } from "declarations/token";
