@@ -1,59 +1,90 @@
-# `lumora`
+# 🌱 Lumora
 
-Welcome to your new `lumora` project and to the Internet Computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+<br />
+<div align="center">
+  <a href="https://github.com/zinct/lumora">
+    <img src="assets/landing.png" alt="Logo">
+  </a>
+  <h3 align="center">Lumora - Decentralized Eco-Action & Reward Platform</h3>
+  <p align="center">
+     Lumora is a fully on-chain eco-action platform that empowers users to submit and verify real-world environmental projects through community voting. Verified actions are rewarded with $LUM tokens (ICRC1/2), while NFT achievements (ICRC7), AI chatbot support, face recognition, and storage canister for image proof enhance the experience with transparency and trust.
+  </p>
+</div>
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+## 📌 Why Lumora?
 
-To learn more before you start working with `lumora`, see the following documentation available online:
+In the face of climate change, environmental action is more important than ever. Lumora introduces a novel way to encourage eco-friendly behavior through token rewards, NFT incentives, and transparent verification systems—all on-chain. Communities can organize environmental projects and reward participants, while individuals can contribute and earn tokens for their real-world impact.
 
-- [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
-- [SDK Developer Tools](https://internetcomputer.org/docs/current/developer-docs/setup/install)
-- [Motoko Programming Language Guide](https://internetcomputer.org/docs/current/motoko/main/motoko)
-- [Motoko Language Quick Reference](https://internetcomputer.org/docs/current/motoko/main/language-manual)
+## 📚 Complete Resources
 
-If you want to start working on your project right away, you might want to try the following commands:
+- Mainnet: https://vhtak-4yaaa-aaaam-aejya-cai.icp0.io/
+- Pitch Deck: https://www.canva.com/design/DAGmaChTRQg/r4ECbK6TqtN8v37RNsSMPw/edit?utm_content=DAGmaChTRQg&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+- White Paper: https://www.notion.so/Lumora-White-Paper-1eaa9c3ab182805bab79cbae7fe8ad7c?showMoveTo=true&saveParent=true
 
-```bash
-cd lumora/
-dfx help
-dfx canister --help
+## 🌟 Features of Lumora
+
+### Eco-Action Project System (On-Chain)
+
+- Communities can create environmental projects.
+- Define rewards, participation period, and manage contributions.
+- Verified on-chain for transparency and traceability.
+
+### Token Reward-Based Participation (ICRC1 & ICRC2)
+
+- Participants receive $LUM tokens after completing verified actions.
+- Rewards are fixed and distributed on-chain.
+- $LUM tokens can be imported into any wallet supporting ICRC1/2.
+
+### NFT Collections (ICRC7)
+
+- Redeem your earned $LUM tokens for unique NFTs.
+- Each NFT symbolizes your eco-contribution and is stored on-chain.
+
+### Face Recognition Verification (On-Chain)
+
+- Ensures user authenticity and prevents abuse.
+- Biometric identity is verified securely using canister-based services.
+
+### Eco-Action Assistant
+
+- Get AI-powered support to generate ideas for your eco-projects.
+- Designed to help communities and individuals take meaningful steps.
+
+## 🏆 What We Are Proud Of
+
+- Fully on-chain reward system using ICRC1 and ICRC2 standard tokens.
+- NFT redemption system supporting ICRC7, symbolizing eco-impact.
+- Community-driven approval for participation and proof validation.
+- AI-powered Eco-Action Assistant to help generate eco-project ideas.
+- Face recognition system for secure identity verification.
+- Secure reward and identity verification using Internet Identity (II).
+- Storage canister integration for immutable image-based evidence.
+
+## Getting Started
+
+### 🔧 Clone the repository:
+
+```sh
+git clone https://github.com/zinct/lumora.git
 ```
 
-## Running the project locally
+### 📦 Install Dependencies:
 
-If you want to test your project locally, you can use the following commands:
-
-```bash
-# Starts the replica, running in the background
-dfx start --background
-
-# Deploys your canisters to the replica and generates your candid interface
-dfx deploy
+```sh
+cd lumora
+npm install
 ```
 
-Once the job completes, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
+### 🛠 Setup Application:
 
-If you have made changes to your backend canister, you can generate a new candid interface with
+- Run build script
 
-```bash
-npm run generate
-```
+  ```sh
+   ./script/setup.sh
+  ```
 
-at any time. This is recommended before starting the frontend development server, and will be run automatically any time you run `dfx deploy`.
+## Created by Lumora Team
 
-If you are making frontend changes, you can start a development server with
-
-```bash
-npm start
-```
-
-Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
-
-### Note on frontend environment variables
-
-If you are hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project does not fetch the root key in production:
-
-- set`DFX_NETWORK` to `ic` if you are using Webpack
-- use your own preferred method to replace `process.env.DFX_NETWORK` in the autogenerated declarations
-  - Setting `canisters -> {asset_canister_id} -> declarations -> env_override to a string` in `dfx.json` will replace `process.env.DFX_NETWORK` with the string in the autogenerated declarations
-- Write your own `createActor` constructor
+- Indra Mahesa (Developer)
+- Audri Mona Najogi (UI/UX Designer)
+- Wildan Syukri Niam (Developer)
