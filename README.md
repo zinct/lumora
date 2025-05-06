@@ -77,6 +77,12 @@ npm install
 
 ### 🛠 Setup Application:
 
+- Deploy applications
+
+  ```sh
+   dfx deploy
+  ```
+
 - Run build script
 
   ```sh
