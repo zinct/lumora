@@ -7,7 +7,7 @@
   </a>
   <h3 align="center">Lumora - Decentralized Eco-Action & Reward Platform</h3>
   <p align="center">
-     Lumora is a fully on-chain eco-action platform that empowers users to submit and verify real-world environmental projects through community voting. Verified actions are rewarded with $LUM tokens (ICRC1/2), while NFT achievements (ICRC7), AI chatbot support, face recognition, and storage canister for image proof enhance the experience with transparency and trust.
+    Lumora is a fully on-chain eco-action platform that empowers users to submit and validate real-world environmental projects with community involvement. Verified actions are rewarded with $LUM tokens (ICRC1/2), while NFT achievements (ICRC7), AI chatbot support, face recognition, and storage canister for image proof enhance the experience with transparency and trust.
   </p>
 </div>
 
