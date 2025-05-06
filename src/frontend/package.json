@@ -36,15 +36,16 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "date-fns": "^4.1.0",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.4.10",
     "lucide-react": "^0.479.0",
     "nprogress": "^0.2.0",
     "react": "^19.0.0",
     "react-day-picker": "^9.6.7",
     "react-dom": "^19.0.0",
+    "react-image-crop": "^11.0.10",
     "react-router": "^7.5.0",
     "react-toastify": "^11.0.5",
-    "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {

@@ -25,7 +25,7 @@
       "wasm": "https://github.com/dfinity/llm/releases/latest/download/llm-canister-ollama.wasm"
     },
     "frontend": {
-      "dependencies": ["backend"],
+      "dependencies": ["backend", "face_recognition"],
       "source": ["src/frontend/dist"],
       "type": "assets",
       "workspace": "frontend"
@@ -34,6 +34,18 @@
       "type": "assets",
       "source": ["src/assets"],
       "build": "echo 'skip build'"
+    },
+    "face_recognition": {
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ],
+      "candid": "src/face_recognition/face_recognition.did",
+      "package": "face_recognition",
+      "type": "custom",
+      "wasm": "target/wasm32-wasip1/release/face_recognition-ic.wasm",
+      "build": ["bash src/face_recognition/build-face-recognition.sh"]
     },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",

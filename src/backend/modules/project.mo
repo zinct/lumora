@@ -540,11 +540,6 @@ module {
                         if (communityId == caller) {
                             for (project in projects.vals()) {
                                 if (project.id == projectId) {
-                                    // Check if project is expired and all evidence is approved
-                                    let now = Time.now();
-                                    if (now <= project.expiredAt) {
-                                        return #Err("Project is not expired yet");
-                                    };
 
                                     // Check if rewards are already distributed
                                     if (project.status == 4) {
@@ -620,7 +615,7 @@ module {
                                         to = { owner = caller; subaccount = null };
                                         amount = communityReward * (10 ** Nat8.toNat(await TokenCanister.getDecimals()));
                                         fee = null;
-                                        memo = ?Text.encodeUtf8("Pool reward from " # community.name);
+                                        memo = ?Text.encodeUtf8("Pool reward");
                                         created_at_time = null;
                                     };
 

@@ -20,10 +20,10 @@ export function SubmitEvidenceForm({ onSubmit }) {
       return;
     }
 
-    // Check file size (2MB limit per file)
-    const oversizedFiles = selectedFiles.filter((file) => file.size > 2 * 1024 * 1024);
+    // Check file size (500KB limit per file)
+    const oversizedFiles = selectedFiles.filter((file) => file.size > 250 * 1024);
     if (oversizedFiles.length > 0) {
-      toast.error(`Some files exceed the 2MB size limit: ${oversizedFiles.map((f) => f.name).join(", ")}`);
+      toast.error(`Some files exceed the 250KB size limit: ${oversizedFiles.map((f) => f.name).join(", ")}`);
       return;
     }
 
@@ -104,7 +104,7 @@ export function SubmitEvidenceForm({ onSubmit }) {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{file.name}</div>
-                  <div className="text-xs text-muted-foreground">{file.size}</div>
+                  <div className="text-xs text-muted-foreground">{formatFileSize(file.size)}</div>
                 </div>
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeFile(index)}>
                   <X className="h-4 w-4" />
@@ -119,7 +119,7 @@ export function SubmitEvidenceForm({ onSubmit }) {
           <div className="py-4">
             <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground mb-1">Drag and drop files, or click to browse</p>
-            <p className="text-xs text-muted-foreground mb-4">Supports PNG, JPG, and JPEG files (max 2MB each, max 2 files)</p>
+            <p className="text-xs text-muted-foreground mb-4">Supports PNG, JPG, and JPEG files (max 500KB each, max 2 files)</p>
             <Button type="button" variant="outline" onClick={() => document.getElementById("evidence-files").click()} disabled={files.length >= 2}>
               <Plus className="h-4 w-4 mr-2" />
               Add Files

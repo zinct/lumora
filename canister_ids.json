@@ -1,0 +1,26 @@
+{
+  "backend": {
+    "ic": "xumdk-uaaaa-aaaam-aejwq-cai"
+  },
+  "chatbot": {
+    "ic": "x5piw-ciaaa-aaaam-aejxa-cai"
+  },
+  "face_recognition": {
+    "ic": "x2ooc-pqaaa-aaaam-aejxq-cai"
+  },
+  "frontend": {
+    "ic": "vhtak-4yaaa-aaaam-aejya-cai"
+  },
+  "llm": {
+    "ic": "vasg6-raaaa-aaaam-aejyq-cai"
+  },
+  "nft": {
+    "ic": "vjrnc-hiaaa-aaaam-aejza-cai"
+  },
+  "storage": {
+    "ic": "voqlw-kqaaa-aaaam-aejzq-cai"
+  },
+  "token": {
+    "ic": "v3x23-lyaaa-aaaam-aej2a-cai"
+  }
+}

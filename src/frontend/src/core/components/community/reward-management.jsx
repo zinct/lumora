@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, ArrowUpDown, Leaf, Award, User, Calendar, Clock, CheckCircle, Send } from "lucide-react";
+import { Search, Leaf, Award, User, Calendar, Clock, CheckCircle, Send } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/core/components/ui/card";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/core/components/ui/label";
 import { Textarea } from "@/core/components/ui/textarea";
 import { backend } from "declarations/backend";
+import { toast } from "react-toastify";
 
 export function RewardManagement() {
   const [isDistributeDialogOpen, setIsDistributeDialogOpen] = useState(false);
@@ -64,9 +65,11 @@ export function RewardManagement() {
         setRewards(transformedRewards);
       } else {
         setError(result.Err);
+        toast.error(`Failed to fetch rewards: ${result.Err}`);
       }
     } catch (err) {
       setError(err.message);
+      toast.error(`Error fetching rewards: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -79,6 +82,7 @@ export function RewardManagement() {
       setIsDistributeDialogOpen(true);
     } catch (error) {
       console.error("Error preparing distribution:", error);
+      toast.error(`Error preparing distribution: ${error.message}`);
     }
   };
 
@@ -95,13 +99,14 @@ export function RewardManagement() {
         setIsDistributeDialogOpen(false);
         setSelectedReward(null);
         setDistributionMessage("");
+        toast.success(`Successfully distributed ${selectedReward.totalAmount} LUM to ${selectedReward.recipients} participants!`);
       } else {
         console.error("Failed to distribute rewards:", result.Err);
-        // You might want to show an error message to the user here
+        toast.error(`Failed to distribute rewards: ${result.Err}`);
       }
     } catch (error) {
       console.error("Error distributing rewards:", error);
-      // You might want to show an error message to the user here
+      toast.error(`Error distributing rewards: ${error.message}`);
     } finally {
       setIsDistributing(false);
     }

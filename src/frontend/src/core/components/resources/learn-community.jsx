@@ -22,7 +22,7 @@ export default function LearnCommunity() {
       borderColor: "border-amber-600",
       textColor: "text-amber-600",
       holdingRequirement: "100 LUM",
-      maxReward: "50 LUM",
+      maxReward: "100 LUM",
       fee: "5%",
     },
     {
@@ -52,7 +52,7 @@ export default function LearnCommunity() {
       borderColor: "border-blue-400",
       textColor: "text-blue-400",
       holdingRequirement: "5,000 LUM",
-      maxReward: "2,000 LUM",
+      maxReward: "5,000 LUM",
       fee: "15%",
     },
   ];
